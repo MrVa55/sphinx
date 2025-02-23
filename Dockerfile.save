@@ -1,8 +1,7 @@
-FROM runpod/stable-diffusion-webui:7.4.4
-
+FROM runpod/stable-diffusion-webui:7.4
 # Install whisper + fastapi + uvicorn
 RUN python3 -m pip install --upgrade pip
-RUN pip install fastapi python-multipart uvicorn torch transformers git+https://github.com/openai/whisper.git
+RUN pip install fastapi python-multipart uvicorn git+https://github.com/openai/whisper.git
 
 # Copy over your app code, etc.
 #COPY app.py /workspace/app.py
