@@ -1,5 +1,5 @@
-# Use a RunPod Stable Diffusion WebUI base image
-FROM runpod/stable-diffusion-webui:7.4.4
+# Use a RunPod ComfyUI base image
+FROM runpod/aitrepreneur/comfyui:2.3.5
 
 # Set environment variable to fix TensorFlow conflicts
 ENV TF_ENABLE_ONEDNN_OPTS=0
@@ -24,8 +24,17 @@ RUN echo 'nohup python3 /app/app.py &> /workspace/logs/fastapi.log &' >> /start.
 # Expose port 8010 for the FastAPI server
 EXPOSE 8010
 
-# Expose ports for Jupyter (8888), WebUI (7860)
-EXPOSE 7860 8888
+# Expose port 3000 for the ComfyUI server
+EXPOSE 3000
+
+# Expose ports for Jupyter 8888
+EXPOSE 8888
+
+# Expose ports for Code Server 7777
+EXPOSE 7777
+
+# Expose ports for RunPod File Uploader 2999
+EXPOSE 2999
 
 # Run a startup test to check CUDA & PyTorch versions (logs will show during build)
 RUN python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.version.cuda)"
