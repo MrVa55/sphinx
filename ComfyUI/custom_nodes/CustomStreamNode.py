@@ -65,9 +65,12 @@ class CustomStreamNode:
         pil_image.save(output_buffer, format="PNG")
         binary_data = output_buffer.getvalue()
         
-        # Update the global variable.
-        global_vars.latest_image_data = binary_data
-        print("CustomStreamNode updated latest_image_data with", len(binary_data), "bytes")
+        # Update the global variables with both image and emotions
+        global_vars.latest_image_data = {
+            "image": binary_data,
+            "emotions": global_vars.get_emotions()  # Include emotions in the data
+        }
+        print("CustomStreamNode updated latest_image_data with", len(binary_data), "bytes and emotions")
         
         return (image,)
 

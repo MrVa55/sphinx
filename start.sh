@@ -225,7 +225,6 @@ execute_script "/pre_start.sh" "PRE-START: Running pre-start script..."
 
 # --- [CUSTOM CHANGE IN SPINX] Merge custom nodes BEFORE post-start hooks ---
 echo "Merging custom nodes into /workspace/ComfyUI/custom_nodes..."
-mkdir -p /workspace/comfyUI/custom_nodes
 rsync -av --ignore-existing /sphinxfiles/comfyUI/custom_nodes/ /workspace/ComfyUI/custom_nodes/ && \
   echo "Custom nodes successfully merged." || \
   echo "Failed to merge custom nodes."

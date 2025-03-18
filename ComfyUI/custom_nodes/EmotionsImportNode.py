@@ -1,6 +1,7 @@
 import requests
 import time
 import threading
+import global_vars
 
 # Global variable to store emotion scores (updated in the background)
 latest_emotion_scores = {}
@@ -15,6 +16,8 @@ def fetch_emotions():
                 data = response.json()
                 # Assume data["emotions"] is a dictionary with emotion: confidence pairs.
                 latest_emotion_scores = data.get("emotions", {})
+                # Store in global_vars for websocket access
+                global_vars.set_emotions(latest_emotion_scores)
                 print("✅ Updated emotion data:", latest_emotion_scores, flush=True)
             else:
                 print("⚠️ API error:", response.status_code, flush=True)

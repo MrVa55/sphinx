@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebSocket Image Stream</title>
+  <title>Weblcome to the turning point</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     #imageContainer { margin-top: 20px; }
     img { max-width: 100%; border: 1px solid #ccc; }
+    #emotionsContainer {
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -15,14 +21,20 @@
   <div id="imageContainer">
     <img id="streamedImage" src="" alt="Streamed Image">
   </div>
+  <div id="emotionsContainer">
+    <h3>Detected Emotions:</h3>
+    <div id="emotionsDisplay">Waiting for emotions data...</div>
+  </div>
+ 
 
   <script>
     // Replace with your actual Runpod domain and endpoint path.
-    const serverAddress = "n3oqe3l8rvw50y-3020.proxy.runpod.net";
+    const serverAddress = "dlz1l9gphefry5-8888.proxy.runpod.net";
     const wsUrl = `wss://${serverAddress}/ws_sphinx`;
     
     const statusEl = document.getElementById("status");
     const imgEl = document.getElementById("streamedImage");
+    const emotionsEl = document.getElementById("emotionsDisplay");
     
     // Create the WebSocket connection.
     let ws = new WebSocket(wsUrl);
@@ -30,35 +42,49 @@
     
     ws.onopen = function() {
       statusEl.textContent = "Connected!";
-      console.log("WebSocket connected");
+      console.log("WebSocket connected to:", wsUrl);
     };
     
     ws.onmessage = function(event) {
-      // Check if the message is text (ping) or binary (image data).
       if (typeof event.data === "string") {
-        console.log("Received text message:", event.data);
-        // You can ignore ping messages.
-        if (event.data.trim().toLowerCase() === "ping") {
-          return;
+        try {
+          const data = JSON.parse(event.data);
+          if (data.emotions) {
+            // Format and display emotions
+            const emotionsText = Object.entries(data.emotions)
+              .map(([emotion, score]) => `${emotion}: ${(score * 100).toFixed(1)}%`)
+              .join('<br>');
+            emotionsEl.innerHTML = emotionsText;
+          }
+          if (data.image) {
+            // Convert base64 image to blob and display
+            const imageData = data.image;
+            const binary = atob(imageData);
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              array[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([array], { type: 'image/png' });
+            imgEl.src = URL.createObjectURL(blob);
+          }
+        } catch (e) {
+          console.log("Received text message:", event.data);
+          if (event.data.trim().toLowerCase() === "ping") {
+            return;
+          }
         }
-      } else if (event.data instanceof ArrayBuffer) {
-        console.log("Received binary message:", event.data.byteLength, "bytes");
-        // Convert the ArrayBuffer into a Blob, then create an object URL.
-        const blob = new Blob([event.data], { type: "image/png" });
-        const url = URL.createObjectURL(blob);
-        imgEl.src = url;
-        statusEl.textContent = "Image received";
       }
     };
     
     ws.onerror = function(error) {
       console.error("WebSocket error:", error);
-      statusEl.textContent = "Error";
+      console.error("Failed to connect to:", wsUrl);
+      statusEl.textContent = "Error: Failed to connect";
     };
     
     ws.onclose = function(event) {
-      console.log("WebSocket closed:", event);
-      statusEl.textContent = "Disconnected";
+      console.log("WebSocket closed. Code:", event.code, "Reason:", event.reason);
+      statusEl.textContent = "Disconnected (Code: " + event.code + ")";
       // Optionally, attempt to reconnect after a delay.
       setTimeout(function() {
         location.reload();
@@ -66,4 +92,4 @@
     };
   </script>
 </body>
-</html>
+</html> 

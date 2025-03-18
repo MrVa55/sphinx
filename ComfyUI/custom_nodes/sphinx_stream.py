@@ -3,6 +3,8 @@ from aiohttp import web
 from server import PromptServer
 import os
 import sys
+import json
+import base64
 sys.path.append(os.path.dirname(__file__))
 import global_vars
 
@@ -19,8 +21,15 @@ async def ws_sphinx(request):
             # Re-read latest_image_data from global_vars (since it is mutable)
            
             if global_vars.latest_image_data is not None and global_vars.latest_image_data != last_sent:
-                print("Sending image of size:", len(global_vars.latest_image_data))
-                await ws.send_bytes(global_vars.latest_image_data)
+                # Convert binary image data to base64
+                image_base64 = base64.b64encode(global_vars.latest_image_data["image"]).decode('utf-8')
+                
+                data_to_send = {
+                    "image": image_base64,
+                    "emotions": global_vars.get_emotions()
+                }
+                print("Sending image and emotions data")
+                await ws.send_str(json.dumps(data_to_send))
                 last_sent = global_vars.latest_image_data
             else:
                 # Optionally send a ping to keep the connection alive.
@@ -30,3 +39,8 @@ async def ws_sphinx(request):
     finally:
         await ws.close()
     return ws
+
+# This empty mapping prevents ComfyUI from trying to load this file as a node.
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
+
