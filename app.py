@@ -6,8 +6,19 @@ from transformers import pipeline
 from diffusers import StableDiffusionPipeline
 import torch
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"]  # Add this line
+)
 
 # Set cache directories to avoid re-downloading models
 os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
