@@ -1,5 +1,5 @@
 {
-    "last_node_id": 13,
+    "last_node_id": 14,
     "last_link_id": 14,
     "nodes": [
       {
@@ -85,7 +85,7 @@
           "Node name for S&R": "KSampler"
         },
         "widgets_values": [
-          279790857505059,
+          247416160028887,
           "randomize",
           20,
           8,
@@ -366,64 +366,6 @@
         }
       },
       {
-        "id": 12,
-        "type": "EmotionsPromptsInputNode",
-        "pos": [
-          -321,
-          93
-        ],
-        "size": {
-          "0": 315,
-          "1": 682
-        },
-        "flags": {},
-        "order": 3,
-        "mode": 0,
-        "outputs": [
-          {
-            "name": "DICT",
-            "type": "DICT",
-            "links": [
-              10
-            ],
-            "shape": 3,
-            "slot_index": 0
-          }
-        ],
-        "properties": {
-          "Node name for S&R": "EmotionsPromptsInputNode"
-        },
-        "widgets_values": [
-          "red",
-          "red",
-          "erd",
-          "",
-          "",
-          "a hug",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "rain",
-          "",
-          "",
-          ""
-        ]
-      },
-      {
         "id": 13,
         "type": "CustomStreamNode",
         "pos": [
@@ -458,6 +400,64 @@
         "properties": {
           "Node name for S&R": "CustomStreamNode"
         }
+      },
+      {
+        "id": 12,
+        "type": "EmotionsPromptsInputNode",
+        "pos": [
+          -321,
+          93
+        ],
+        "size": {
+          "0": 315,
+          "1": 682
+        },
+        "flags": {},
+        "order": 3,
+        "mode": 0,
+        "outputs": [
+          {
+            "name": "DICT",
+            "type": "DICT",
+            "links": [
+              10
+            ],
+            "shape": 3,
+            "slot_index": 0
+          }
+        ],
+        "properties": {
+          "Node name for S&R": "EmotionsPromptsInputNode"
+        },
+        "widgets_values": [
+          "red",
+          "blue",
+          "erd",
+          "a cockroach",
+          "clouds",
+          "a hug",
+          "confusion",
+          "discovering something",
+          "lust",
+          "broken glass",
+          "thunderclouds",
+          "vomit",
+          "shy face",
+          "celebrations and baloons",
+          "darkness",
+          "gifts and presents",
+          "wiltering flower",
+          "smile and dances",
+          "hearts",
+          "shaking",
+          "blue skies",
+          "standing straight",
+          "lightbulb",
+          "rain",
+          "regret",
+          "blue",
+          "rainbows and unicorns"
+        ]
       }
     ],
     "links": [
@@ -570,10 +570,10 @@
     "config": {},
     "extra": {
       "ds": {
-        "scale": 0.6115909044841499,
+        "scale": 0.5054470284992985,
         "offset": {
-          "0": 267.4060245833137,
-          "1": 93.9140680999884
+          "0": 647.8275678191958,
+          "1": 94.74976358861954
         }
       }
     },

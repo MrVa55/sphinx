@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Turning Point Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #recordingStatus {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        #image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #generatedImage {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #transcription {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        #emotionsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .emotion-tag {
+            background-color: #e0f7fa;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #333;
+        }
+        .toggle-button {
+            background-color: #2196F3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>The Turning Point Dashboard</h1>
+    
+    <div class="container">
+        <h2>Record Speech</h2>
+        <p>Speak into your microphone to detect emotions and generate a visualization.</p>
+        <button id="recordButton">Start Recording</button>
+        <button id="stopButton" disabled>Stop Recording</button>
+        <button id="triggerWorkflowButton" class="toggle-button">Trigger Workflow</button>
+        <p id="recordingStatus">Ready to record</p>
+    </div>
+    
+    <div class="container hidden" id="resultsContainer">
+        <h2>Results</h2>
+        <div id="transcription"></div>
+        <h3>Detected Emotions:</h3>
+        <div id="emotionsContainer"></div>
+        <div id="image-container">
+            <h3>Generated Visualization:</h3>
+            <img id="generatedImage" alt="Generated image based on emotions">
+        </div>
+    </div>
+    
+    <button id="toggleLogButton" class="toggle-button">Show/Hide Log</button>
+    <div class="log-container hidden" id="logContainer"></div>
+    
+    <script>
+        // Configuration
+        const apiServerUrl = window.location.origin;
+        const comfyuiUrl = window.location.origin.replace("8010", "3020");
+        
+        // WebSocket Connection to ComfyUI for real-time updates
+        let socket;
+        let conectInterval;
+        let chunks = [];
+        let mediaRecorder;
+        let isRecording = false;
+        let imageFetchAttempts = 0;
+        const maxFetchAttempts = 5;
+        
+        // DOM Elements
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const triggerWorkflowButton = document.getElementById('triggerWorkflowButton');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const transcriptionElement = document.getElementById('transcription');
+        const emotionsContainer = document.getElementById('emotionsContainer');
+        const generatedImage = document.getElementById('generatedImage');
+        const logContainer = document.getElementById('logContainer');
+        const toggleLogButton = document.getElementById('toggleLogButton');
+        
+        // Utility function to log messages
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        // Toggle log visibility
+        toggleLogButton.addEventListener('click', function() {
+            logContainer.classList.toggle('hidden');
+        });
+        
+        // Connect to ComfyUI WebSocket
+        function connectWebSocket() {
+            // Convert HTTP URL to WebSocket URL
+            const wsUrl = comfyuiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+            const socketUrl = `${wsUrl}/ws?clientId=sphinx_api_client`;
+            
+            log(`Connecting to ComfyUI WebSocket: ${socketUrl}`);
+            
+            socket = new WebSocket(socketUrl);
+            
+            socket.onopen = function() {
+                log("Connected to ComfyUI WebSocket");
+                clearInterval(conectInterval);
+            };
+            
+            socket.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                log(`ComfyUI message: ${JSON.stringify(message).substring(0, 100)}`);
+                
+                // Handle node execution progress
+                if (message.type === "executing") {
+                    log(`ComfyUI executing node: ${message.data.node}`);
+                }
+                
+                // Handle complete execution
+                if (message.type === "execution_complete") {
+                    log("ComfyUI execution complete");
+                }
+                
+                // Handle errors
+                if (message.type === "execution_error") {
+                    log(`ComfyUI execution error: ${message.data.exception_message || "Unknown error"}`);
+                }
+            };
+            
+            socket.onerror = function(error) {
+                log("ComfyUI WebSocket error");
+            };
+            
+            socket.onclose = function() {
+                log("ComfyUI WebSocket closed - reconnecting in 5 seconds");
+                conectInterval = setTimeout(connectWebSocket, 5000);
+            };
+        }
+        
+        // Initialize WebSocket connection
+        connectWebSocket();
+        
+        // Setup audio recording
+        async function setupAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.addEventListener('dataavailable', function(e) {
+                    chunks.push(e.data);
+                });
+                
+                // When recording stops, process the audio
+                mediaRecorder.addEventListener('stop', function() {
+                    log("Recording stopped, processing audio...");
+                    recordingStatus.textContent = 'Processing audio...';
+                    
+                    const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                    chunks = [];
+                    
+                    sendAudioToServer(audioBlob);
+                });
+                
+                log("Audio recording setup complete");
+            } catch (error) {
+                log(`Error setting up audio recording: ${error.message}`);
+                recordingStatus.textContent = 'Error: Could not access microphone';
+            }
+        }
+        
+        // Function to send audio to server
+        async function sendAudioToServer(audioBlob) {
+            try {
+                log("Sending audio to server...");
+                
+                const formData = new FormData();
+                formData.append('file', audioBlob);
+                
+                const response = await fetch(`${apiServerUrl}/transcribe_and_generate`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                log("Received API response with transcription and emotions");
+                
+                displayResults(data);
+                
+                // Start trying to fetch the generated image
+                log("Starting image fetch attempts");
+                imageFetchAttempts = 0;
+                fetchLatestImageWithRetry();
+            } catch (error) {
+                log(`Error sending audio to server: ${error.message}`);
+                recordingStatus.textContent = 'Error processing audio';
+            }
+        }
+        
+        // Function to fetch the latest generated image with retry
+        function fetchLatestImageWithRetry() {
+            imageFetchAttempts++;
+            log(`Fetching latest image (attempt ${imageFetchAttempts}/${maxFetchAttempts})`);
+            
+            fetch(`${comfyuiUrl}/history`)
+                .then(response => response.json())
+                .then(data => {
+                    // Find the latest image
+                    if (data && Object.keys(data).length > 0) {
+                        const latestPrompt = Object.keys(data).sort().pop();
+                        const outputs = data[latestPrompt]?.outputs || {};
+                        const images = Object.values(outputs)
+                            .filter(output => output.images && output.images.length > 0)
+                            .flatMap(output => output.images);
+                        
+                        if (images && images.length > 0) {
+                            // Get the latest image
+                            const latestImage = images[images.length - 1];
+                            const imageUrl = `${comfyuiUrl}/view?filename=${latestImage.filename}&type=${latestImage.type}`;
+                            log(`Found image: ${imageUrl}`);
+                            generatedImage.src = imageUrl;
+                            return;
+                        }
+                    }
+                    
+                    throw new Error("No images found");
+                })
+                .catch(error => {
+                    log(`Image fetch attempt ${imageFetchAttempts} failed`);
+                    if (imageFetchAttempts < maxFetchAttempts) {
+                        const delay = imageFetchAttempts * 2000 + 3000; // Increase delay with each attempt
+                        log(`Retrying in ${delay/1000} seconds...`);
+                        setTimeout(fetchLatestImageWithRetry, delay);
+                    } else {
+                        log("Max fetch attempts reached. Please check ComfyUI for any errors.");
+                    }
+                });
+        }
+        
+        // Display results from the API
+        function displayResults(data) {
+            resultsContainer.classList.remove('hidden');
+            
+            // Display transcription
+            transcriptionElement.textContent = data.transcription;
+            
+            // Display emotions
+            emotionsContainer.innerHTML = '';
+            const emotions = data.emotions;
+            const sortedEmotions = Object.entries(emotions)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10); // Show top 10 emotions
+                
+            sortedEmotions.forEach(([emotion, score]) => {
+                const emotionTag = document.createElement('span');
+                emotionTag.className = 'emotion-tag';
+                emotionTag.textContent = `${emotion}: ${(score * 100).toFixed(1)}%`;
+                emotionsContainer.appendChild(emotionTag);
+            });
+            
+            recordingStatus.textContent = 'Processing complete! Generating image...';
+        }
+        
+        // Record button click handler
+        recordButton.addEventListener('click', function() {
+            if (!mediaRecorder) {
+                setupAudioRecording().then(() => startRecording());
+            } else {
+                startRecording();
+            }
+        });
+        
+        // Start recording function
+        function startRecording() {
+            chunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+            recordButton.disabled = true;
+            stopButton.disabled = false;
+            recordingStatus.textContent = 'Recording...';
+            log("Recording started");
+        }
+        
+        // Stop button click handler
+        stopButton.addEventListener('click', function() {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordButton.disabled = false;
+                stopButton.disabled = true;
+                log("Recording stopped by user");
+            }
+        });
+        
+        // Manual trigger workflow button
+        triggerWorkflowButton.addEventListener('click', function() {
+            log("Manually triggering workflow...");
+            fetch(`${apiServerUrl}/trigger_workflow`, {
+                method: 'POST'
+            })
+            .then(response => {
+                log(`Workflow trigger response: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                log(`Workflow triggered: ${JSON.stringify(data)}`);
+                // Start trying to fetch the generated image
+                imageFetchAttempts = 0;
+                fetchLatestImageWithRetry();
+            })
+            .catch(error => {
+                log(`Error triggering workflow: ${error.message}`);
+            });
+        });
+        
+        // Initialize the app
+        setupAudioRecording();
+    </script>
+</body>
+</html> 
