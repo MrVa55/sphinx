@@ -230,12 +230,33 @@ rsync -av --ignore-existing /sphinxfiles/comfyUI/custom_nodes/ /workspace/ComfyU
   echo "Failed to merge custom nodes."
 # --- End CUSTOM CHANGE ---
 
+# --- Add our custom app setup ---
+# Create app directory if it doesn't exist
+mkdir -p /workspace/app
+
+# Copy app files if they don't exist in workspace
+if [ ! -f "/workspace/app/app.py" ]; then
+    cp /sphinxfiles/app/app.py /workspace/app/
+    echo "Copied app.py to workspace"
+fi
+
+if [ ! -f "/workspace/app/workflow_manager.py" ]; then
+    cp /sphinxfiles/app/workflow_manager.py /workspace/app/
+    echo "Copied workflow_manager.py to workspace"
+fi
+
+if [ ! -f "/workspace/app/workflow.json" ]; then
+    cp /sphinxfiles/app/workflow.json /workspace/app/
+    echo "Copied workflow.json to workspace"
+fi
+
+
 execute_script "/post_start.sh" "POST-START: Running post-start script..."
 
 echo "Container is READY!"
 
 # start your custom Sphinx API in the background
-nohup python3 /app/app.py &> /workspace/logs/fastapi.log &
+nohup python3 /workspace/app/app.py &> /workspace/logs/fastapi.log &
 echo "Custom API started in background."
 
 # Keep the container alive

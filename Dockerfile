@@ -12,14 +12,17 @@ RUN python3 -m pip install --upgrade pip && \
     git+https://github.com/openai/whisper.git
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /workspace/app
 
 # Copy your application code into the container.
-COPY app.py /app/app.py
+COPY app.py /sphinxfiles/app/
+COPY workflow_manager.py /sphinxfiles/app/
+COPY workflow.json /sphinxfiles/app/
 
 # Copy your custom nodes (located locally in ComfyUI/custom_nodes) into a persistent directory.
 # We are copying into /sphinxfiles/comfyUI/custom_nodes so we keep the subdirectory structure.
 COPY ComfyUI/custom_nodes/ /sphinxfiles/comfyUI/custom_nodes/
+COPY app.py /sphinxfiles/app/app.py
 
 
 # Append FastAPI startup command to the original `/start.sh`
