@@ -117,9 +117,8 @@ async def trigger_workflow():
     Trigger the ComfyUI workflow to generate an image based on the latest emotions.
     """
     try:
-        # Import the function directly
-        from test_comfyui_connection import test_comfyui_connection
-        comfyui_url = test_comfyui_connection()
+        # Use the function from workflow_manager instead of importing it
+        comfyui_url = workflow_manager.test_comfyui_connection()
         thread = workflow_manager.run_workflow_with_custom_nodes(comfyui_url)
         return {"status": "success", "message": "Workflow triggered successfully"}
     except Exception as e:

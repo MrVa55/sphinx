@@ -250,6 +250,12 @@ if [ ! -f "/workspace/app/workflow.json" ]; then
     echo "Copied workflow.json to workspace"
 fi
 
+# Copy client directory if it doesn't exist
+if [ ! -d "/workspace/app/client" ]; then
+    mkdir -p /workspace/app/client
+    cp -r /sphinxfiles/app/client/* /workspace/app/client/
+    echo "Copied client directory to workspace"
+fi
 
 execute_script "/post_start.sh" "POST-START: Running post-start script..."
 
