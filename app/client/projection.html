@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Turning Point Experience</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: black;
+            color: white;
+        }
+        
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 1s ease;
+        }
+        
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 5% 10%;
+            z-index: 1;
+        }
+        
+        #conversation {
+            max-height: 70vh;
+            overflow-y: auto;
+            margin-bottom: 2rem;
+            /* Hide scrollbar */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        #conversation::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .message {
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .message.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .script {
+            font-size: 2rem;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            line-height: 1.4;
+        }
+        
+        .response {
+            font-size: 1.8rem;
+            color: #a0e6ff;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            line-height: 1.4;
+        }
+        
+        .typing-indicator {
+            display: inline-block;
+            font-size: 2rem;
+            color: white;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        #status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #333;
+            z-index: 10;
+        }
+        
+        #status-indicator.listening {
+            background-color: #ff4444;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+        
+        #turn-indicator {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            padding: 1rem 2rem;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 30px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        #turn-indicator.visible {
+            opacity: 1;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    
+    <div id="overlay">
+        <div id="conversation"></div>
+    </div>
+    
+    <div id="status-indicator"></div>
+    
+    <div id="turn-indicator">Your turn to speak</div>
+    
+    <div class="loading" id="initialLoading">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <script>
+        // Configuration
+        const apiServerUrl = window.location.origin;
+        const comfyuiUrl = window.location.origin.replace("8010", "3020");
+        
+        // DOM Elements
+        const background = document.getElementById('background');
+        const conversationContainer = document.getElementById('conversation');
+        const statusIndicator = document.getElementById('status-indicator');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const initialLoading = document.getElementById('initialLoading');
+        
+        // State variables
+        let mediaRecorder;
+        let chunks = [];
+        let isRecording = false;
+        let imageFetchInterval;
+        let lastImageUrl = '';
+        let conversation = [];
+        
+        // Script dialog (this would come from your server in a real implementation)
+        const script = [
+            { type: 'script', text: "Welcome to The Turning Point experience." },
+            { type: 'script', text: "I'd like to ask you about a moment that changed your life." },
+            { type: 'user', prompt: "Can you tell me about a turning point in your life?" },
+            { type: 'script', text: "That's an interesting story." },
+            { type: 'script', text: "Let me ask you something else." },
+            { type: 'user', prompt: "How did this experience change you as a person?" },
+            { type: 'script', text: "Thank you for sharing that with me." },
+            { type: 'script', text: "I have one last question for you." },
+            { type: 'user', prompt: "What advice would you give to someone facing a similar turning point?" },
+            { type: 'script', text: "That's profound. Thank you for this conversation." },
+            { type: 'script', text: "Our experience is now complete." }
+        ];
+        
+        let currentStep = 0;
+        
+        // Initialize the experience
+        window.onload = async function() {
+            await setupAudioRecording();
+            startFetchingLatestImage();
+            
+            // Remove loading screen after 3 seconds
+            setTimeout(() => {
+                initialLoading.style.opacity = 0;
+                setTimeout(() => {
+                    initialLoading.style.display = 'none';
+                    startConversation();
+                }, 1000);
+            }, 3000);
+        };
+        
+        // Setup audio recording
+        async function setupAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.addEventListener('dataavailable', function(e) {
+                    chunks.push(e.data);
+                });
+                
+                // When recording stops, process the audio
+                mediaRecorder.addEventListener('stop', function() {
+                    const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                    chunks = [];
+                    sendAudioToServer(audioBlob);
+                });
+                
+                console.log("Audio recording setup complete");
+            } catch (error) {
+                console.error("Error setting up audio recording:", error);
+            }
+        }
+        
+        // Function to start the conversation flow
+        function startConversation() {
+            processNextStep();
+        }
+        
+        // Process the next step in the script
+        function processNextStep() {
+            if (currentStep >= script.length) {
+                console.log("Conversation complete");
+                return;
+            }
+            
+            const step = script[currentStep];
+            
+            if (step.type === 'script') {
+                // AI is speaking
+                addMessage(step.text, 'script');
+                currentStep++;
+                
+                // Wait a reasonable time before moving to the next step
+                setTimeout(() => {
+                    processNextStep();
+                }, 4000 + (step.text.length * 50)); // Time based on message length
+            } else if (step.type === 'user') {
+                // User's turn to speak
+                turnIndicator.textContent = step.prompt;
+                turnIndicator.classList.add('visible');
+                statusIndicator.classList.add('listening');
+                
+                // Start recording
+                startRecording();
+                
+                // For demo purposes, we'll automatically stop after a certain time
+                // In reality, you might want user gesture to stop recording
+                setTimeout(() => {
+                    stopRecording();
+                    turnIndicator.classList.remove('visible');
+                    statusIndicator.classList.remove('listening');
+                    
+                    // Move to next step after processing user input
+                    currentStep++;
+                    setTimeout(() => {
+                        processNextStep();
+                    }, 3000);
+                }, 10000); // Give user 10 seconds to respond
+            }
+        }
+        
+        // Start recording
+        function startRecording() {
+            chunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+        }
+        
+        // Stop recording
+        function stopRecording() {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+            }
+        }
+        
+        // Send audio to server for processing
+        async function sendAudioToServer(audioBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob);
+                
+                const response = await fetch(`${apiServerUrl}/transcribe_and_generate`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                console.log("Received API response:", data);
+                
+                // Add user's transcribed speech to conversation
+                if (data.transcription) {
+                    addMessage(data.transcription, 'response');
+                }
+            } catch (error) {
+                console.error("Error sending audio to server:", error);
+            }
+        }
+        
+        // Add a message to the conversation with typing effect
+        function addMessage(text, type) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+            conversationContainer.appendChild(messageElement);
+            
+            // Add typing indicator
+            const typingIndicator = document.createElement('span');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.textContent = '|';
+            messageElement.appendChild(typingIndicator);
+            
+            // Simulate typing effect
+            let displayText = '';
+            let index = 0;
+            
+            messageElement.classList.add('visible');
+            
+            const typingInterval = setInterval(() => {
+                if (index < text.length) {
+                    displayText += text[index];
+                    messageElement.textContent = displayText;
+                    
+                    // Add typing indicator after text
+                    messageElement.appendChild(typingIndicator);
+                    
+                    index++;
+                } else {
+                    clearInterval(typingInterval);
+                    // Remove typing indicator when done
+                    typingIndicator.remove();
+                }
+                
+                // Scroll to bottom
+                conversationContainer.scrollTop = conversationContainer.scrollHeight;
+            }, 30);
+            
+            // Save to conversation history
+            conversation.push({
+                text: text,
+                type: type
+            });
+        }
+        
+        // Fetch the latest generated image periodically
+        function startFetchingLatestImage() {
+            // First immediate fetch
+            fetchLatestImage();
+            
+            // Then set up interval
+            imageFetchInterval = setInterval(fetchLatestImage, 5000);
+        }
+        
+        // Fetch the latest image from ComfyUI
+        function fetchLatestImage() {
+            fetch(`${comfyuiUrl}/history`)
+                .then(response => response.json())
+                .then(data => {
+                    // Find the latest image
+                    if (data && Object.keys(data).length > 0) {
+                        const latestPrompt = Object.keys(data).sort().pop();
+                        const outputs = data[latestPrompt]?.outputs || {};
+                        
+                        const images = Object.values(outputs)
+                            .filter(output => output.images && output.images.length > 0)
+                            .flatMap(output => output.images);
+                        
+                        if (images && images.length > 0) {
+                            // Get the latest image
+                            const latestImage = images[images.length - 1];
+                            const imageUrl = `${comfyuiUrl}/view?filename=${latestImage.filename}&type=${latestImage.type}`;
+                            
+                            // Only update if it's a new image
+                            if (imageUrl !== lastImageUrl) {
+                                console.log("New image found:", imageUrl);
+                                lastImageUrl = imageUrl;
+                                background.style.backgroundImage = `url(${imageUrl})`;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching latest image:", error);
+                });
+        }
+        
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Space bar to manually advance
+            if (event.code === 'Space') {
+                if (!isRecording) {
+                    currentStep++;
+                    processNextStep();
+                }
+            }
+            
+            // Escape to reset
+            if (event.code === 'Escape') {
+                currentStep = 0;
+                conversationContainer.innerHTML = '';
+                conversation = [];
+                processNextStep();
+            }
+            
+            // S to manually start/stop recording
+            if (event.code === 'KeyS') {
+                if (isRecording) {
+                    stopRecording();
+                    statusIndicator.classList.remove('listening');
+                } else {
+                    startRecording();
+                    statusIndicator.classList.add('listening');
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

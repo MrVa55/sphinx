@@ -126,6 +126,22 @@ async def trigger_workflow():
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
+@app.get("/projection", response_class=HTMLResponse)
+async def get_projection():
+    """Serve the immersive projection experience page."""
+    try:
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        projection_path = os.path.join(app_dir, "client", "projection.html")
+        
+        if os.path.exists(projection_path):
+            with open(projection_path, "r") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            return HTMLResponse(content="<h1>Error: projection.html not found</h1>")
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")
+
 # Static file serving with absolute path
 app_dir = os.path.dirname(os.path.abspath(__file__))
 client_dir = os.path.join(app_dir, "client")
