@@ -10,7 +10,7 @@ import requests
 import sys
 sys.path.append('/workspace/app')
 import workflow_manager
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -142,10 +142,50 @@ async def get_projection():
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")
 
+@app.get("/client/script.js", response_class=HTMLResponse)
+async def get_script_js():
+    """Serve the script.js file."""
+    try:
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(app_dir, "client", "script.js")
+        
+        if os.path.exists(script_path):
+            with open(script_path, "r") as f:
+                js_content = f.read()
+            return HTMLResponse(content=js_content, media_type="application/javascript")
+        else:
+            return HTMLResponse(content="console.error('script.js not found');", 
+                               media_type="application/javascript", 
+                               status_code=404)
+    except Exception as e:
+        return HTMLResponse(content=f"console.error('Error loading script: {str(e)}');", 
+                           media_type="application/javascript", 
+                           status_code=500)
+
 # Static file serving with absolute path
 app_dir = os.path.dirname(os.path.abspath(__file__))
 client_dir = os.path.join(app_dir, "client")
 app.mount("/client", StaticFiles(directory=client_dir), name="client")
+
+@app.get("/proxy/comfyui/history")
+async def proxy_comfyui_history():
+    """Proxy for ComfyUI history endpoint to avoid CORS issues"""
+    try:
+        comfyui_url = workflow_manager.test_comfyui_connection()
+        response = requests.get(f"{comfyui_url}/history", timeout=5)
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/proxy/comfyui/view")
+async def proxy_comfyui_view(filename: str, type: str):
+    """Proxy for ComfyUI image view endpoint to avoid CORS issues"""
+    try:
+        comfyui_url = workflow_manager.test_comfyui_connection()
+        response = requests.get(f"{comfyui_url}/view?filename={filename}&type={type}", timeout=5)
+        return Response(content=response.content, media_type=response.headers.get('content-type', 'image/png'))
+    except Exception as e:
+        return Response(content=b"Error loading image", media_type="text/plain", status_code=500)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8010)

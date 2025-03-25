@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Turning Point Experience</title>
+    <!-- Do not load script here -->
     <style>
         * {
             margin: 0;
@@ -223,7 +224,7 @@
     <script>
         // Configuration
         const apiServerUrl = window.location.origin;
-        const comfyuiUrl = window.location.origin.replace("8010", "3020");
+        // No direct comfyUI URL - use our proxy instead
         
         // DOM Elements
         const background = document.getElementById('background');
@@ -241,19 +242,19 @@
         let lastImageUrl = '';
         let conversation = [];
         
-        // Script dialog (this would come from your server in a real implementation)
+        // Script dialog directly in the file until we can fix the external loading
         const script = [
             { type: 'script', text: "Welcome to The Turning Point experience." },
-            { type: 'script', text: "I'd like to ask you about a moment that changed your life." },
-            { type: 'user', prompt: "Can you tell me about a turning point in your life?" },
-            { type: 'script', text: "That's an interesting story." },
-            { type: 'script', text: "Let me ask you something else." },
-            { type: 'user', prompt: "How did this experience change you as a person?" },
-            { type: 'script', text: "Thank you for sharing that with me." },
-            { type: 'script', text: "I have one last question for you." },
-            { type: 'user', prompt: "What advice would you give to someone facing a similar turning point?" },
-            { type: 'script', text: "That's profound. Thank you for this conversation." },
-            { type: 'script', text: "Our experience is now complete." }
+            { type: 'script', text: "I'd like to explore with you the thoughts that might be holding you back." },
+            { type: 'script', text: "Take a moment to reflect as we begin this journey together." },
+            { type: 'script', text: "When you see the blinking red dot, please speak into the microphone." },
+            { type: 'user', prompt: "What is the thought that most inhibits you from achieving what you want in your life?" },
+            { type: 'script', text: "Thank you for sharing that." },
+            { type: 'script', text: "Another question to consider..." },
+            { type: 'user', prompt: "If this limiting thought were suddenly removed, what would you do differently?" },
+            { type: 'script', text: "Thank you for participating in The Turning Point experience." },
+            { type: 'script', text: "The images you've seen were generated based on your emotional responses, creating a unique visual journey for you." },
+            { type: 'script', text: "This experience is now complete. Take what you've discovered with you." }
         ];
         
         let currentStep = 0;
@@ -441,7 +442,7 @@
         
         // Fetch the latest image from ComfyUI
         function fetchLatestImage() {
-            fetch(`${comfyuiUrl}/history`)
+            fetch(`${apiServerUrl}/proxy/comfyui/history`)
                 .then(response => response.json())
                 .then(data => {
                     // Find the latest image
@@ -456,7 +457,7 @@
                         if (images && images.length > 0) {
                             // Get the latest image
                             const latestImage = images[images.length - 1];
-                            const imageUrl = `${comfyuiUrl}/view?filename=${latestImage.filename}&type=${latestImage.type}`;
+                            const imageUrl = `${apiServerUrl}/proxy/comfyui/view?filename=${latestImage.filename}&type=${latestImage.type}`;
                             
                             // Only update if it's a new image
                             if (imageUrl !== lastImageUrl) {
