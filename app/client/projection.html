@@ -29,7 +29,11 @@
             z-index: 0;
             background-size: cover;
             background-position: center;
-            transition: opacity 1s ease;
+            transition: opacity 1s ease, filter 1s ease;
+        }
+        
+        #background.blur {
+            filter: blur(8px) brightness(0.7);
         }
         
         #overlay {
@@ -107,14 +111,50 @@
             z-index: 10;
         }
         
-        #status-indicator.listening {
+        #prompt-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 2rem;
+        }
+        
+        #prompt-container.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #recording-indicator {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
             background-color: #ff4444;
+            margin-bottom: 2rem;
             animation: pulse 1.5s infinite;
+        }
+        
+        #prompt-text {
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(0,0,0,0.9);
+            max-width: 80%;
         }
         
         @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(255, 68, 68, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
         }
         
@@ -171,7 +211,10 @@
     
     <div id="status-indicator"></div>
     
-    <div id="turn-indicator">Your turn to speak</div>
+    <div id="prompt-container">
+        <div id="recording-indicator"></div>
+        <div id="prompt-text">Your question will appear here</div>
+    </div>
     
     <div class="loading" id="initialLoading">
         <div class="loading-spinner"></div>
@@ -186,7 +229,8 @@
         const background = document.getElementById('background');
         const conversationContainer = document.getElementById('conversation');
         const statusIndicator = document.getElementById('status-indicator');
-        const turnIndicator = document.getElementById('turn-indicator');
+        const promptContainer = document.getElementById('prompt-container');
+        const promptText = document.getElementById('prompt-text');
         const initialLoading = document.getElementById('initialLoading');
         
         // State variables
@@ -214,33 +258,35 @@
         
         let currentStep = 0;
         
-        // Initialize the experience
-        window.onload = async function() {
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("Starting application...");
+            
+            // Setup audio recording
             await setupAudioRecording();
+            
+            // Start fetching images
             startFetchingLatestImage();
             
-            // Remove loading screen after 3 seconds
+            // Hide loading screen after 2 seconds
             setTimeout(() => {
-                initialLoading.style.opacity = 0;
-                setTimeout(() => {
-                    initialLoading.style.display = 'none';
-                    startConversation();
-                }, 1000);
-            }, 3000);
-        };
+                initialLoading.style.display = 'none';
+                startConversation();
+            }, 2000);
+        });
         
-        // Setup audio recording
+        // Set up audio recording
         async function setupAudioRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
                 mediaRecorder = new MediaRecorder(stream);
                 
-                mediaRecorder.addEventListener('dataavailable', function(e) {
-                    chunks.push(e.data);
+                mediaRecorder.addEventListener('dataavailable', event => {
+                    chunks.push(event.data);
                 });
                 
-                // When recording stops, process the audio
-                mediaRecorder.addEventListener('stop', function() {
+                mediaRecorder.addEventListener('stop', async () => {
                     const audioBlob = new Blob(chunks, { type: 'audio/webm' });
                     chunks = [];
                     sendAudioToServer(audioBlob);
@@ -277,8 +323,9 @@
                 }, 4000 + (step.text.length * 50)); // Time based on message length
             } else if (step.type === 'user') {
                 // User's turn to speak
-                turnIndicator.textContent = step.prompt;
-                turnIndicator.classList.add('visible');
+                promptText.textContent = step.prompt;
+                promptContainer.classList.add('visible');
+                background.classList.add('blur');
                 statusIndicator.classList.add('listening');
                 
                 // Start recording
@@ -288,7 +335,8 @@
                 // In reality, you might want user gesture to stop recording
                 setTimeout(() => {
                     stopRecording();
-                    turnIndicator.classList.remove('visible');
+                    promptContainer.classList.remove('visible');
+                    background.classList.remove('blur');
                     statusIndicator.classList.remove('listening');
                     
                     // Move to next step after processing user input
@@ -446,9 +494,13 @@
             if (event.code === 'KeyS') {
                 if (isRecording) {
                     stopRecording();
+                    promptContainer.classList.remove('visible');
+                    background.classList.remove('blur');
                     statusIndicator.classList.remove('listening');
                 } else {
                     startRecording();
+                    promptContainer.classList.add('visible');
+                    background.classList.add('blur');
                     statusIndicator.classList.add('listening');
                 }
             }
