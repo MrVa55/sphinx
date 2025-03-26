@@ -242,16 +242,20 @@
         let lastImageUrl = '';
         let conversation = [];
         
-        // Script dialog directly in the file until we can fix the external loading
+        // Script dialog with clear markers
         const script = [
             { type: 'script', text: "Welcome to The Turning Point experience." },
             { type: 'script', text: "I'd like to explore with you the thoughts that might be holding you back." },
             { type: 'script', text: "Take a moment to reflect as we begin this journey together." },
+            { type: 'clear' }, // Clear the screen before asking the first question
             { type: 'script', text: "When you see the blinking red dot, please speak into the microphone." },
             { type: 'user', prompt: "What is the thought that most inhibits you from achieving what you want in your life?" },
             { type: 'script', text: "Thank you for sharing that." },
-            { type: 'script', text: "Another question to consider..." },
+            { type: 'clear' }, // Clear before the second question
+            { type: 'script', text: "Let's explore this further..." },
             { type: 'user', prompt: "If this limiting thought were suddenly removed, what would you do differently?" },
+            { type: 'script', text: "That's a powerful insight." },
+            { type: 'clear' }, // Clear before the conclusion
             { type: 'script', text: "Thank you for participating in The Turning Point experience." },
             { type: 'script', text: "The images you've seen were generated based on your emotional responses, creating a unique visual journey for you." },
             { type: 'script', text: "This experience is now complete. Take what you've discovered with you." }
@@ -313,7 +317,14 @@
             
             const step = script[currentStep];
             
-            if (step.type === 'script') {
+            if (step.type === 'clear') {
+                // Clear the conversation display
+                conversationContainer.innerHTML = '';
+                conversation = [];
+                currentStep++;
+                // Process the next step immediately after clearing
+                setTimeout(() => processNextStep(), 500);
+            } else if (step.type === 'script') {
                 // AI is speaking
                 addMessage(step.text, 'script');
                 currentStep++;
