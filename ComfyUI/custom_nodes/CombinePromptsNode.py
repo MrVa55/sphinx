@@ -1,15 +1,9 @@
-# CombineEmotionPromptsNode.py
+# CombinePromptsNode.py
 
-class CombineEmotionPromptsNode:
+class CombinePromptsNode:
     """
-    This node combines a base prompt with emotion prompt fragments based on detected emotion scores.
-    
-    Inputs:
-      - base_prompt: The main prompt provided by the user.
-      - emotion_scores: A dictionary with emotion names as keys and their detected scores.
-      - emotion_prompts: A dictionary mapping emotion names to user-defined prompt fragments.
-      
-    It selects the top two emotions (with non-empty prompt fragments) and appends their fragments to the base prompt.
+    Combines emotion and transformation prompts into a structured, coherent prompt.
+    Places the transformation and emotion components in appropriate context.
     """
     def __init__(self):
         pass
@@ -18,45 +12,75 @@ class CombineEmotionPromptsNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "base_prompt": ("STRING", {"default": ""}),
+                "transformation_from": ("STRING", {"default": "uncertainty"}),
+                "transformation_to": ("STRING", {"default": "confidence"}),
                 "emotion_scores": ("DICT", {"default": {}}),
-                "emotion_prompts": ("DICT", {"default": {}})
+                "transformation_prompts": ("DICT", {"default": {}}),
+                "emotion_prompts": ("DICT", {"default": {}}),
+                "base_style": ("STRING", {"default": "cinematic lighting, high quality, detailed"}),
             }
         }
 
     RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("combined_prompt",)
     FUNCTION = "combine_prompts"
-    CATEGORY = "Custom/Emotions"
+    CATEGORY = "Sphinx"
 
-    def combine_prompts(self, base_prompt, emotion_scores, emotion_prompts):
-        print("DEBUG: CombineEmotionPromptsNode input base_prompt:", base_prompt, flush=True)
-        print("DEBUG: CombineEmotionPromptsNode input emotion_scores:", emotion_scores, flush=True)
-        print("DEBUG: CombineEmotionPromptsNode input emotion_prompts:", emotion_prompts, flush=True)
-
-        # Sort the detected emotions by score (highest first)
+    def combine_prompts(self, transformation_from, transformation_to, 
+                       emotion_scores, transformation_prompts, emotion_prompts,
+                       base_style=""):
+        print(f"DEBUG: Combining prompts for {transformation_from} to {transformation_to}", flush=True)
+        
+        # Get transformation prompt if available
+        # Try different formats of keys to find a match
+        trans_key = f"{transformation_from.lower()}_to_{transformation_to.lower()}".replace(" ", "_")
+        trans_prompt = None
+        
+        # Try to find the transformation prompt
+        if trans_key in transformation_prompts:
+            trans_prompt = transformation_prompts[trans_key]
+        else:
+            # Try alternative formats
+            for key in transformation_prompts:
+                if transformation_from.lower() in key.lower() and transformation_to.lower() in key.lower():
+                    trans_prompt = transformation_prompts[key]
+                    break
+        
+        if not trans_prompt:
+            # Use the transformation names directly if no prompt found
+            trans_prompt = f"transformation from {transformation_from} to {transformation_to}"
+            
+        # Sort emotions by score and get top emotions
         sorted_emotions = sorted(emotion_scores.items(), key=lambda x: x[1], reverse=True)
-        print("DEBUG: Sorted emotions:", sorted_emotions, flush=True)
-
-        top_fragments = []
-        for emotion, score in sorted_emotions:
-            fragment = emotion_prompts.get(emotion, "").strip()
-            if fragment:
-                top_fragments.append(fragment)
-            if len(top_fragments) >= 2:
-                break
-
-        print("DEBUG: Top fragments selected:", top_fragments, flush=True)
-        final_prompt = base_prompt.strip()
-        if top_fragments:
-            final_prompt += " " + " ".join(top_fragments)
-        print("DEBUG: CombineEmotionPromptsNode final prompt:", final_prompt, flush=True)
-        # Return as a one-element tuple.
-        return (final_prompt,)
+        top_emotions = [e[0] for e in sorted_emotions if e[1] >= 0.1][:2]  # Use top 2 significant emotions
+        
+        # Get emotion prompts for top emotions
+        emotion_prompt_parts = []
+        for emotion in top_emotions:
+            if emotion in emotion_prompts and emotion_prompts[emotion].strip():
+                emotion_prompt_parts.append(emotion_prompts[emotion].strip())
+        
+        # Create coherent prompt structure
+        # Main prompt is the transformation with emotional context and style
+        combined_prompt = f"The main subject shows {trans_prompt}"
+        
+        # Add emotional context as background/mood
+        if emotion_prompt_parts:
+            emotion_text = " and ".join(emotion_prompt_parts)
+            combined_prompt += f", with background and mood reflecting {emotion_text}"
+        
+        # Add style if provided
+        if base_style:
+            combined_prompt += f", {base_style}"
+        
+        print(f"DEBUG: Final combined prompt: {combined_prompt}", flush=True)
+        
+        return (combined_prompt,)
 
 NODE_CLASS_MAPPINGS = {
-    "CombineEmotionPromptsNode": CombineEmotionPromptsNode
+    "CombinePromptsNode": CombinePromptsNode
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "CombineEmotionPromptsNode": "Combine Emotion Prompts Node"
+    "CombinePromptsNode": "Combine Emotion & Transformation Prompts into overall prompt"
 }

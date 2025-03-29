@@ -1,15 +1,31 @@
 # global_vars.py
 
-latest_image_data = None
-latest_emotions_data = None
+# Global variables module for ComfyUI custom nodes
+# This allows sharing data between nodes and threads
 
-def set_emotions(emotions):
-    global latest_emotions_data
-    latest_emotions_data = emotions
+# Global variables for emotions and transformations
+emotions = {}
+transformation = {"from": "Uncertainty", "to": "Confidence"}
+
+def set_emotions(emotion_data):
+    """Set the global emotions dictionary"""
+    global emotions
+    emotions = emotion_data
 
 def get_emotions():
-    global latest_emotions_data
-    return latest_emotions_data
+    """Get the global emotions dictionary"""
+    global emotions
+    return emotions
+
+def set_transformation(trans_data):
+    """Set the global transformation dictionary"""
+    global transformation
+    transformation = trans_data
+
+def get_transformation():
+    """Get the global transformation dictionary"""
+    global transformation
+    return transformation
 
 # This empty mapping prevents ComfyUI from trying to load this file as a node.
 NODE_CLASS_MAPPINGS = {}
