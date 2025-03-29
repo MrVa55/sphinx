@@ -1,6 +1,6 @@
 # Sphinx - Emotional Response Visualization
 
-Sphinx is a therapeutic visualization system developed for the Luma AI hackathon. It combines voice transcription, sentiment analysis, and AI-generated visuals to create a unique therapeutic experience based on a user's emotional responses.
+Sphinx is a therapeutic visualization system developed for the Luma AI hackathon. It combines voice transcription, sentiment analysis, and AI-generated videos to create a unique therapeutic experience based on a user's emotional responses.
 
 ## Overview
 
@@ -9,8 +9,9 @@ Sphinx creates a therapeutic experience by:
 1. Capturing the user's voice through a microphone
 2. Transcribing speech using OpenAI's Whisper model
 3. Analyzing the emotional content of the transcription
-4. Generating a visual representation based on the detected emotions
-5. Displaying the visualization in an immersive experience
+4. Generating a prompt based on the detected emotions
+5. Using the Luma Labs API to create a video based on the prompt
+6. Displaying the video in an immersive experience
 
 The system is designed to help users reflect on their thoughts and feelings through a guided conversational experience, with real-time visual feedback that represents their emotional state.
 
@@ -43,7 +44,7 @@ The project consists of several key components:
 - **Voice Recording**: Capture user speech through the browser's microphone
 - **Speech Transcription**: Convert speech to text using OpenAI's Whisper model
 - **Emotion Analysis**: Analyze text for emotional content using a pre-trained model
-- **Dynamic Visualization**: Generate images that reflect the detected emotions
+- **Dynamic Visualization**: Generate videos through Luma Labs API that reflect the detected emotions
 - **Guided Experience**: Follow a therapeutic conversation flow with visual feedback
 - **Real-time Updates**: See visualizations update as emotions are detected
 
@@ -53,7 +54,7 @@ The project consists of several key components:
 
 - **Speech Recognition**: OpenAI Whisper (base model)
 - **Emotion Classification**: DistilBERT-based emotion classifier (joeddav/distilbert-base-uncased-go-emotions-student)
-- **Image Generation**: Stable Diffusion XL (sd_xl_base_1.0)
+- **Video Generation**: Luma Labs API
 
 ### Emotion Processing Pipeline
 
@@ -61,8 +62,8 @@ The project consists of several key components:
 2. Whisper transcribes the audio to text
 3. The emotion classifier analyzes the text and assigns scores to 27 different emotions
 4. The top emotions are selected and combined with visual prompt fragments
-5. The combined prompt is sent to Stable Diffusion to generate an image
-6. The image is streamed back to the client for display
+5. The combined prompt is sent to the Luma Labs API to generate a video
+6. The video is streamed back to the client for display
 
 ### Deployment
 
@@ -89,7 +90,7 @@ The application is containerized using Docker and can be deployed on platforms t
 1. On the dashboard, click "Start Recording" to begin capturing your voice
 2. Speak into your microphone
 3. Click "Stop Recording" when finished
-4. The system will display your transcribed speech, detected emotions, and a generated visualization
+4. The system will display your transcribed speech, detected emotions, and a generated video
 5. For the guided experience, navigate to the projection page and follow the prompts
 
 ## The Therapeutic Experience
@@ -99,7 +100,7 @@ The guided experience asks reflective questions such as:
 1. "What is the thought that most inhibits you from achieving what you want in your life?"
 2. "If this limiting thought were suddenly removed, what would you do differently?"
 
-As you respond, the system analyzes your emotional state and generates visuals that reflect your feelings, creating a unique and personalized therapeutic journey.
+As you respond, the system analyzes your emotional state and generates videos that reflect your feelings, creating a unique and personalized therapeutic journey.
 
 ## License
 
