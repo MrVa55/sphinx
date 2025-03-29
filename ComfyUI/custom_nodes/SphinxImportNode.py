@@ -46,11 +46,21 @@ def fetch_data():
                 trans_response = requests.get(transformation_url)
                 if trans_response.status_code == 200:
                     trans_data = trans_response.json()
-                    if trans_data:
-                        latest_transformation = {
-                            "from": trans_data.get("from", "Uncertainty"),
-                            "to": trans_data.get("to", "Confidence")
-                        }
+                    if trans_data and trans_data.get("status") == "success":
+                        # Handle different response formats
+                        if "transformation" in trans_data:
+                            # Format from latest_transformation endpoint
+                            transform_data = trans_data.get("transformation", {})
+                            latest_transformation = {
+                                "from": transform_data.get("from", "Uncertainty"),
+                                "to": transform_data.get("to", "Confidence")
+                            }
+                        else:
+                            # Format from latest_media or other endpoints
+                            latest_transformation = {
+                                "from": trans_data.get("from", "Uncertainty"),
+                                "to": trans_data.get("to", "Confidence")
+                            }
                         print(f"✅ Updated transformation: {latest_transformation}", flush=True)
             except:
                 pass  # Silently continue if transformation endpoint isn't available yet

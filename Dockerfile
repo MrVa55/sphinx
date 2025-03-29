@@ -14,17 +14,15 @@ RUN python3 -m pip install --upgrade pip && \
 # Set the working directory
 WORKDIR /workspace/app
 
-# Copy your application code into the container.
-COPY /app/app.py /sphinxfiles/app/
-COPY /app/workflow_manager.py /sphinxfiles/app/
-COPY /app/workflow.json /sphinxfiles/app/
-COPY /app/client /sphinxfiles/app/client
+# Create directories for our app files
+RUN mkdir -p /sphinxfiles/app
+RUN mkdir -p /sphinxfiles/ComfyUI/custom_nodes
 
-# Copy your custom nodes (located locally in ComfyUI/custom_nodes) into a persistent directory.
-# We are copying into /sphinxfiles/comfyUI/custom_nodes so we keep the subdirectory structure.
-COPY ComfyUI/custom_nodes/ /sphinxfiles/comfyUI/custom_nodes/
-COPY /app/app.py /sphinxfiles/app/app.py
+# Copy the entire app directory to sphinxfiles
+COPY ./app/ /sphinxfiles/app/
 
+# Copy ComfyUI custom nodes
+COPY ./ComfyUI/custom_nodes/ /sphinxfiles/ComfyUI/custom_nodes/
 
 # Append FastAPI startup command to the original `/start.sh`
 RUN echo 'nohup python3 /app/app.py &> /workspace/logs/fastapi.log &' >> /start.sh

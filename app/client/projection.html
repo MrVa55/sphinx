@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Turning Point Experience</title>
     <!-- Do not load script here -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -21,32 +22,40 @@
             color: white;
         }
         
-        #background {
-            position: absolute;
+        #background-container {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 0;
-            background-size: cover;
-            background-position: center;
-            transition: opacity 1s ease, filter 1s ease;
+            z-index: -1;
+            background-color: black;
         }
         
-        #background.blur {
-            filter: blur(8px) brightness(0.7);
+        #background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        
+        #background-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
         }
         
         #overlay {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
+            width: 60%;
             height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 5% 10%;
+            padding: 5% 5% 5% 10%;
             z-index: 1;
         }
         
@@ -201,10 +210,288 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        /* Add these new styles for the emotion detection panel */
+        #emotion-panel {
+            position: fixed;
+            top: 240px;
+            right: 50px;
+            width: 280px;
+            max-height: 70vh;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            color: #a0e6ff;
+            font-family: 'Share Tech Mono', monospace;
+            z-index: 5;
+            overflow-y: auto;
+            transform: translateX(300px);
+            transition: transform 0.5s ease;
+        }
+        
+        #emotion-panel.visible {
+            transform: translateX(0);
+        }
+        
+        .emotion-panel-header {
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #4cc2ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(0, 150, 255, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        .emotion-item {
+            margin-bottom: 10px;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        
+        .emotion-item.visible {
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .emotion-name {
+            color: #4cc2ff;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        
+        .emotion-bar-container {
+            width: 100%;
+            height: 6px;
+            background-color: rgba(0, 150, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .emotion-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00b3ff, #00f0ff);
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+        
+        /* Animation for emotion detected notification */
+        #emotion-detected {
+            position: fixed;
+            top: 30%;
+            left: 0;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            border-right: 2px solid #00f0ff;
+            color: #00f0ff;
+            font-family: 'Share Tech Mono', monospace;
+            padding: 20px;
+            z-index: 100;
+            width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: width 0.6s cubic-bezier(0.42, 0, 0.58, 1);
+        }
+        
+        #emotion-detected.active {
+            width: 320px;
+        }
+        
+        #emotion-detected-text {
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+        
+        #emotion-detected-name {
+            font-size: 22px;
+            color: #ffffff;
+            margin-top: 10px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            transition-delay: 0.6s;
+        }
+        
+        #emotion-detected.active #emotion-detected-name {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Blinking cursor animation */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background-color: #00f0ff;
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* Scanner line animation */
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 5px;
+            background-color: rgba(0, 240, 255, 0.7);
+            box-shadow: 0 0 10px 3px rgba(0, 240, 255, 0.5);
+            animation: scan 2s infinite;
+            opacity: 0;
+        }
+        
+        @keyframes scan {
+            0% { left: 0; opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { left: 100%; opacity: 0.7; }
+        }
+        
+        /* Move the transformation container to the top and make it more prominent */
+        #transformation-container {
+            position: fixed;
+            top: 50px;
+            right: 50px;
+            width: 320px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(255, 150, 0, 0.7);
+            border-radius: 5px;
+            padding: 20px;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            z-index: 6;
+            opacity: 0;
+            transform: translateY(-50px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        #transformation-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .transformation-header {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ffae19;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(255, 150, 0, 0.5);
+            padding-bottom: 10px;
+        }
+        
+        .transformation-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .transformation-from, .transformation-to {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .transformation-from {
+            color: #ff7d4d;
+        }
+        
+        .transformation-to {
+            color: #66ff66;
+        }
+        
+        .transformation-arrow {
+            margin: 0 10px;
+            color: #ffae19;
+            font-size: 20px;
+        }
+        
+        .transformation-progress {
+            width: 100%;
+            height: 6px;
+            background-color: rgba(255, 150, 0, 0.2);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .transformation-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff7d4d, #66ff66);
+            border-radius: 3px;
+            transition: width 2s ease;
+        }
+        
+        .transformation-progress-light {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 5px;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5);
+            animation: progress-scan 2s infinite;
+        }
+        
+        @keyframes progress-scan {
+            0% { left: -5px; }
+            100% { left: 100%; }
+        }
+        
+        /* Add styles for the transformation activated notification */
+        #transformation-activated {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            border-right: 2px solid #ff9900;
+            color: #ff9900;
+            font-family: 'Share Tech Mono', monospace;
+            padding: 20px;
+            z-index: 100;
+            width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: width 0.6s cubic-bezier(0.42, 0, 0.58, 1);
+        }
+        
+        #transformation-activated.active {
+            width: 420px;
+        }
+        
+        #transformation-activated-text {
+            font-size: 22px;
+            letter-spacing: 2px;
+        }
+        
+        .orange-cursor {
+            display: inline-block;
+            width: 10px;
+            height: 22px;
+            background-color: #ff9900;
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
     </style>
 </head>
 <body>
-    <div id="background"></div>
+    <div id="background-container">
+        <img id="background-image" src="" alt="Generated background">
+        <video id="background-video" autoplay loop muted></video>
+    </div>
     
     <div id="overlay">
         <div id="conversation"></div>
@@ -217,8 +504,43 @@
         <div id="prompt-text">Your question will appear here</div>
     </div>
     
-    <div class="loading" id="initialLoading">
+    <div id="turn-indicator">Your turn</div>
+    
+    <div id="initialLoading" class="loading">
         <div class="loading-spinner"></div>
+    </div>
+    
+    <div id="emotion-panel">
+        <div class="emotion-panel-header">EMOTION ANALYSIS</div>
+        <div id="emotion-list"></div>
+    </div>
+    
+    <div id="emotion-detected">
+        <div class="scanner-line"></div>
+        <div id="emotion-detected-text">EMOTION DETECTED<span class="cursor"></span></div>
+        <div id="emotion-detected-name"></div>
+    </div>
+    
+    <div id="transformation-container">
+        <div class="transformation-header">TRANSFORMATION PATH</div>
+        <div class="transformation-content">
+            <div class="transformation-from" id="transform-from">STAGNANT</div>
+            <div class="transformation-arrow">→</div>
+            <div class="transformation-to" id="transform-to">CREATIVE</div>
+        </div>
+        <div class="transformation-progress">
+            <div class="transformation-progress-bar" id="transform-progress"></div>
+            <div class="transformation-progress-light"></div>
+        </div>
+    </div>
+    
+    <div id="transformation-activated">
+        <div class="scanner-line"></div>
+        <div id="transformation-activated-text">TRANSFORMATION ACTIVATED<span class="orange-cursor"></span></div>
+    </div>
+    
+    <div id="status-overlay" class="overlay">
+        Waiting for content...
     </div>
     
     <script>
@@ -227,12 +549,14 @@
         // No direct comfyUI URL - use our proxy instead
         
         // DOM Elements
-        const background = document.getElementById('background');
+        const backgroundImage = document.getElementById('background-image');
+        const backgroundVideo = document.getElementById('background-video');
         const conversationContainer = document.getElementById('conversation');
         const statusIndicator = document.getElementById('status-indicator');
         const promptContainer = document.getElementById('prompt-container');
         const promptText = document.getElementById('prompt-text');
         const initialLoading = document.getElementById('initialLoading');
+        const statusOverlay = document.getElementById('status-overlay');
         
         // State variables
         let mediaRecorder;
@@ -241,6 +565,7 @@
         let imageFetchInterval;
         let lastImageUrl = '';
         let conversation = [];
+        let transformationSet = false;
         
         // Script dialog with clear markers
         const script = [
@@ -337,7 +662,8 @@
                 // User's turn to speak
                 promptText.textContent = step.prompt;
                 promptContainer.classList.add('visible');
-                background.classList.add('blur');
+                backgroundImage.style.display = 'none';
+                backgroundVideo.style.display = 'none';
                 statusIndicator.classList.add('listening');
                 
                 // Start recording
@@ -348,7 +674,8 @@
                 setTimeout(() => {
                     stopRecording();
                     promptContainer.classList.remove('visible');
-                    background.classList.remove('blur');
+                    backgroundImage.style.display = 'none';
+                    backgroundVideo.style.display = 'none';
                     statusIndicator.classList.remove('listening');
                     
                     // Move to next step after processing user input
@@ -393,9 +720,109 @@
                 if (data.transcription) {
                     addMessage(data.transcription, 'response');
                 }
+                
+                // Display detected emotions
+                if (data.emotions) {
+                    displayEmotions(data.emotions);
+                }
+                
+                // Display transformation path - only if not already set
+                if (data.transformation && !transformationSet) {
+                    displayTransformation(data.transformation);
+                    transformationSet = true; // Mark transformation as set
+                    
+                    // Show the transformation activated notification
+                    showTransformationActivated();
+                }
+                
+                // Add this after the successful transcription response
+                handleTranscription(data);
             } catch (error) {
                 console.error("Error sending audio to server:", error);
             }
+        }
+        
+        // Display emotions in the panel
+        function displayEmotions(emotions) {
+            const emotionPanel = document.getElementById('emotion-panel');
+            const emotionList = document.getElementById('emotion-list');
+            
+            // Clear previous emotions
+            emotionList.innerHTML = '';
+            
+            // Make the panel visible
+            emotionPanel.classList.add('visible');
+            
+            // Sort emotions by score (highest first)
+            const sortedEmotions = Object.entries(emotions)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5); // Show top 5 emotions
+            
+            // Find the dominant emotion
+            const dominantEmotion = sortedEmotions[0];
+            
+            // Show the "Emotion Detected" notification
+            showEmotionDetected(dominantEmotion[0], dominantEmotion[1]);
+            
+            // Add each emotion to the panel with a delay
+            sortedEmotions.forEach((emotion, index) => {
+                const emotionName = emotion[0];
+                const emotionScore = emotion[1];
+                
+                setTimeout(() => {
+                    // Create emotion item
+                    const emotionItem = document.createElement('div');
+                    emotionItem.className = 'emotion-item';
+                    
+                    // Create emotion name
+                    const nameElement = document.createElement('div');
+                    nameElement.className = 'emotion-name';
+                    nameElement.textContent = emotionName.toUpperCase();
+                    
+                    // Create bar container
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'emotion-bar-container';
+                    
+                    // Create bar
+                    const bar = document.createElement('div');
+                    bar.className = 'emotion-bar';
+                    barContainer.appendChild(bar);
+                    
+                    // Add to item
+                    emotionItem.appendChild(nameElement);
+                    emotionItem.appendChild(barContainer);
+                    
+                    // Add to list
+                    emotionList.appendChild(emotionItem);
+                    
+                    // Trigger animations
+                    setTimeout(() => {
+                        emotionItem.classList.add('visible');
+                        
+                        // Animate the bar width after a short delay
+                        setTimeout(() => {
+                            bar.style.width = `${emotionScore * 100}%`;
+                        }, 300);
+                    }, 50);
+                }, index * 200); // Stagger each emotion's appearance
+            });
+        }
+        
+        // Show the "Emotion Detected" notification
+        function showEmotionDetected(emotionName, score) {
+            const notification = document.getElementById('emotion-detected');
+            const nameElement = document.getElementById('emotion-detected-name');
+            
+            // Update the emotion name
+            nameElement.textContent = emotionName.toUpperCase() + ` (${(score * 100).toFixed(0)}%)`;
+            
+            // Show the notification
+            notification.classList.add('active');
+            
+            // Hide it after 4 seconds
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, 4000);
         }
         
         // Add a message to the conversation with typing effect
@@ -442,6 +869,43 @@
             });
         }
         
+        // Display the transformation path
+        function displayTransformation(transformation) {
+            console.log("Displaying transformation:", transformation);
+            const container = document.getElementById('transformation-container');
+            const fromElement = document.getElementById('transform-from');
+            const toElement = document.getElementById('transform-to');
+            const progressBar = document.getElementById('transform-progress');
+            
+            // Update the transformation text
+            fromElement.textContent = transformation.from.toUpperCase();
+            toElement.textContent = transformation.to.toUpperCase();
+            
+            // Show the container
+            container.classList.add('visible');
+            
+            // Animate the progress bar
+            setTimeout(() => {
+                progressBar.style.width = '100%';
+            }, 500);
+            
+            // Keep progress at 100% since this is a permanent transformation
+            // No timeout to reset the progress
+        }
+        
+        // Add this new function to show the transformation activated notification
+        function showTransformationActivated() {
+            const notification = document.getElementById('transformation-activated');
+            
+            // Show the notification
+            notification.classList.add('active');
+            
+            // Hide it after 6 seconds
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, 6000);
+        }
+        
         // Fetch the latest generated image periodically
         function startFetchingLatestImage() {
             // First immediate fetch
@@ -474,7 +938,7 @@
                             if (imageUrl !== lastImageUrl) {
                                 console.log("New image found:", imageUrl);
                                 lastImageUrl = imageUrl;
-                                background.style.backgroundImage = `url(${imageUrl})`;
+                                backgroundImage.style.backgroundImage = `url(${imageUrl})`;
                             }
                         }
                     }
@@ -507,16 +971,130 @@
                 if (isRecording) {
                     stopRecording();
                     promptContainer.classList.remove('visible');
-                    background.classList.remove('blur');
+                    backgroundImage.style.display = 'none';
+                    backgroundVideo.style.display = 'none';
                     statusIndicator.classList.remove('listening');
                 } else {
                     startRecording();
                     promptContainer.classList.add('visible');
-                    background.classList.add('blur');
+                    backgroundImage.style.display = 'none';
+                    backgroundVideo.style.display = 'none';
                     statusIndicator.classList.add('listening');
                 }
             }
         });
+        
+        // Function to poll for the latest transformation
+        async function pollLatestTransformation() {
+            try {
+                const response = await fetch(`${apiServerUrl}/latest_transformation`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    statusOverlay.textContent = `Transcription: ${data.text}`;
+                    
+                    // Check if we have a video to display
+                    if (data.video_url) {
+                        // Switch to video display
+                        backgroundImage.style.display = 'none';
+                        backgroundVideo.style.display = 'block';
+                        
+                        // Only update if the URL has changed
+                        if (backgroundVideo.src !== data.video_url) {
+                            backgroundVideo.src = data.video_url;
+                            console.log('Updated video:', data.video_url);
+                        }
+                    }
+                    // Fall back to image if no video
+                    else if (data.image_url) {
+                        // Switch to image display
+                        backgroundVideo.style.display = 'none';
+                        backgroundImage.style.display = 'block';
+                        
+                        // Only update if the URL has changed
+                        if (backgroundImage.src !== data.image_url) {
+                            backgroundImage.src = data.image_url;
+                            console.log('Updated image:', data.image_url);
+                        }
+                    }
+                } else {
+                    statusOverlay.textContent = `Error: ${data.message}`;
+                }
+            } catch (error) {
+                console.error('Error polling for transformation:', error);
+                statusOverlay.textContent = `Connection error: ${error.message}`;
+            }
+        }
+        
+        // Poll for updates regularly
+        setInterval(pollLatestTransformation, 2000);
+        
+        // Initial poll
+        pollLatestTransformation();
+
+        // Add this function to handle media updates (without changing any existing code)
+        async function pollLatestMedia() {
+            try {
+                const response = await fetch(`${apiServerUrl}/latest_media`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    if (data.type === 'video' && data.url) {
+                        console.log('Found video to display:', data.url);
+                        // Update the DOM elements that already exist
+                        const bgVideo = document.getElementById('background-video');
+                        if (bgVideo) {
+                            bgVideo.src = data.url;
+                            bgVideo.style.display = 'block';
+                            // Hide any image element if it exists
+                            const bgImage = document.getElementById('background-image');
+                            if (bgImage) {
+                                bgImage.style.display = 'none';
+                            }
+                        } else {
+                            console.error('Video element not found in DOM');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling for media:', error);
+            }
+        }
+
+        // Run this poll function periodically without interfering with existing code
+        setInterval(pollLatestMedia, 5000);
+
+        // Add this after the successful transcription response
+        function handleTranscription(data) {
+            if (data.status === 'success') {
+                console.log('Transcription successful:', data.transcription);
+                
+                // Display transcription
+                statusOverlay.textContent = data.transcription;
+                
+                // CRITICAL: Trigger the workflow after successful transcription
+                console.log('Triggering workflow with transformation:', data.transformation);
+                fetch(`${apiServerUrl}/trigger_workflow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        transformation: data.transformation
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Workflow triggered result:', result);
+                })
+                .catch(error => {
+                    console.error('Error triggering workflow:', error);
+                });
+            } else {
+                console.error('Transcription failed:', data.message);
+                statusOverlay.textContent = `Error: ${data.message}`;
+            }
+        }
     </script>
 </body>
 </html> 

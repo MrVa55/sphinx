@@ -231,10 +231,12 @@ rsync -av --ignore-existing /sphinxfiles/comfyUI/custom_nodes/ /workspace/ComfyU
 # --- End CUSTOM CHANGE ---
 
 # --- Add our custom app setup ---
-# Create app directory if it doesn't exist
-mkdir -p /workspace/app
+# Create required directories
+mkdir -p /workspace/app/client
+mkdir -p /workspace/app/workflows  # Add directory for custom workflows
+mkdir -p /workspace/ComfyUI/custom_nodes
 
-# Copy app files if they don't exist in workspace
+# Copy files only if they don't exist
 if [ ! -f "/workspace/app/app.py" ]; then
     cp /sphinxfiles/app/app.py /workspace/app/
     echo "Copied app.py to workspace"
@@ -250,12 +252,54 @@ if [ ! -f "/workspace/app/workflow.json" ]; then
     echo "Copied workflow.json to workspace"
 fi
 
-# Copy client directory if it doesn't exist
-if [ ! -d "/workspace/app/client" ]; then
-    mkdir -p /workspace/app/client
-    cp -r /sphinxfiles/app/client/* /workspace/app/client/
-    echo "Copied client directory to workspace"
+if [ ! -f "/workspace/app/run_video_workflow.py" ]; then
+    cp /sphinxfiles/app/run_video_workflow.py /workspace/app/ 2>/dev/null || echo "No run_video_workflow.py in sphinxfiles"
 fi
+
+if [ ! -f "/workspace/app/sabins_workflow_api.json" ]; then
+    cp /sphinxfiles/app/sabins_workflow_api.json /workspace/app/ 2>/dev/null || echo "No sabins_workflow_api.json in sphinxfiles"
+fi
+
+# Copy client files individually to prevent overwriting
+if [ ! -f "/workspace/app/client/index.html" ]; then
+    cp /sphinxfiles/app/client/index.html /workspace/app/client/ 2>/dev/null || echo "No index.html in sphinxfiles"
+fi
+
+if [ ! -f "/workspace/app/client/gui.html" ]; then
+    cp /sphinxfiles/app/client/gui.html /workspace/app/client/ 2>/dev/null || echo "No gui.html in sphinxfiles"
+fi
+
+if [ ! -f "/workspace/app/client/projection.html" ]; then
+    cp /sphinxfiles/app/client/projection.html /workspace/app/client/ 2>/dev/null || echo "No projection.html in sphinxfiles"
+fi
+
+if [ ! -f "/workspace/app/client/script.js" ]; then
+    cp /sphinxfiles/app/client/script.js /workspace/app/client/ 2>/dev/null || echo "No script.js in sphinxfiles"
+fi
+
+if [ ! -f "/workspace/app/client/style.css" ]; then
+    cp /sphinxfiles/app/client/style.css /workspace/app/client/ 2>/dev/null || echo "No style.css in sphinxfiles"
+fi
+
+# Copy custom nodes only if they don't exist
+for node_file in /sphinxfiles/ComfyUI/custom_nodes/*; do
+    if [ -f "$node_file" ]; then
+        basename=$(basename "$node_file")
+        if [ ! -f "/workspace/ComfyUI/custom_nodes/$basename" ]; then
+            cp "$node_file" /workspace/ComfyUI/custom_nodes/
+            echo "Copied custom node $basename to workspace"
+        fi
+    fi
+done
+
+# Start ComfyUI in the background
+cd /workspace/ComfyUI && python main.py --listen 0.0.0.0 --port 3020 &
+
+# Wait for ComfyUI to start
+sleep 5
+
+# Start Flask app
+cd /workspace/app && python app.py
 
 execute_script "/post_start.sh" "POST-START: Running post-start script..."
 

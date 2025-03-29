@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Workflow Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #recordingStatus {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        #image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #generatedImage {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        select, input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .parameter-container {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .parameter-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        .parameter-row label {
+            flex: 1;
+            padding-right: 10px;
+        }
+        .parameter-row input {
+            flex: 2;
+        }
+        .progress-container {
+            display: none;
+            margin: 15px 0;
+        }
+        .progress-bar-background {
+            background-color: #e0e0e0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background-color: #4CAF50;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Custom Workflow Dashboard</h1>
+    
+    <div class="container">
+        <h2>Run Custom Workflow</h2>
+        
+        <div>
+            <label for="workflow-select">Select Workflow:</label>
+            <select id="workflow-select">
+                <option value="">Loading workflows...</option>
+            </select>
+            <button id="refresh-workflows-btn">Refresh List</button>
+        </div>
+        
+        <div class="parameter-container">
+            <h3>Workflow Parameters</h3>
+            <p>Add custom parameters for your workflow:</p>
+            
+            <div id="parameters-list">
+                <!-- Dynamic parameters will be added here -->
+                <div class="parameter-row">
+                    <label for="param-from">From State:</label>
+                    <input type="text" id="param-from" name="from" placeholder="Starting state">
+                </div>
+                <div class="parameter-row">
+                    <label for="param-to">To State:</label>
+                    <input type="text" id="param-to" name="to" placeholder="Target state">
+                </div>
+            </div>
+            
+            <button id="add-param-btn">Add Parameter</button>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="run-workflow-btn">Run Workflow</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Upload New Workflow</h2>
+        
+        <div class="upload-form">
+            <input type="file" id="workflow-file" accept=".json">
+            <button id="upload-workflow-btn">Upload Workflow</button>
+            <div id="upload-status"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Execution Status</h2>
+        <div id="status-display">Not running</div>
+        
+        <!-- Add progress bar container -->
+        <div class="progress-container" style="display: none; margin: 15px 0;">
+            <div class="progress-bar-background" style="background-color: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div class="progress-bar" style="background-color: #4CAF50; height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <div class="progress-text" style="text-align: center; margin-top: 5px; font-size: 14px;">0%</div>
+        </div>
+        
+        <div class="log-container" id="execution-log">
+            <!-- Log entries will appear here -->
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Output</h2>
+        <div id="image-container">
+            <img id="output-image" style="max-width: 100%; display: none;">
+            <div id="video-container" style="display: none;">
+                <h3>Generated Video</h3>
+                <video id="output-video" controls style="max-width: 100%;"></video>
+                <button id="download-video-btn" style="margin-top: 10px;">Download Video</button>
+            </div>
+            <p id="no-output-message">No output available</p>
+        </div>
+    </div>
+    
+    <div style="margin-top: 10px;">
+        <button id="list-videos-btn">List All Available Videos</button>
+        <div id="video-list" style="margin-top: 10px; max-height: 200px; overflow-y: auto; font-size: 14px; background-color: #f0f0f0; padding: 10px; display: none;"></div>
+    </div>
+    
+    <script>
+        // Configuration
+        const apiServerUrl = ''; // Empty string for same-origin requests
+        
+        // DOM Elements
+        const workflowSelect = document.getElementById('workflow-select');
+        const refreshWorkflowsBtn = document.getElementById('refresh-workflows-btn');
+        const runWorkflowBtn = document.getElementById('run-workflow-btn');
+        const statusDisplay = document.getElementById('status-display');
+        const executionLog = document.getElementById('execution-log');
+        const outputImage = document.getElementById('output-image');
+        const noImageMessage = document.getElementById('no-output-message');
+        const parametersContainer = document.getElementById('parameters-list');
+        const addParamBtn = document.getElementById('add-param-btn');
+        
+        // Add parameter functionality
+        addParamBtn.addEventListener('click', function() {
+            const paramRow = document.createElement('div');
+            paramRow.className = 'parameter-row';
+            
+            const paramId = 'param-' + Date.now();
+            
+            paramRow.innerHTML = `
+                <label for="${paramId}">
+                    <input type="text" placeholder="Parameter name" style="width: 90%;">
+                </label>
+                <input type="text" id="${paramId}" placeholder="Parameter value">
+                <button class="remove-param-btn" style="margin-left: 5px;">✕</button>
+            `;
+            
+            parametersContainer.appendChild(paramRow);
+            
+            // Add remove button functionality
+            paramRow.querySelector('.remove-param-btn').addEventListener('click', function() {
+                paramRow.remove();
+            });
+        });
+        
+        // Load available workflows
+        async function loadWorkflows() {
+            try {
+                const response = await fetch(`${apiServerUrl}/list_workflows`);
+                const data = await response.json();
+                
+                workflowSelect.innerHTML = '';
+                
+                if (data.status === 'success' && data.workflows && data.workflows.length > 0) {
+                    data.workflows.forEach(workflow => {
+                        const option = document.createElement('option');
+                        option.value = workflow;
+                        option.textContent = workflow;
+                        workflowSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No workflows available';
+                    workflowSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error('Error loading workflows:', error);
+                workflowSelect.innerHTML = '<option value="">Error loading workflows</option>';
+            }
+        }
+        
+        // Add variables for progress elements
+        const progressContainer = document.querySelector('.progress-container');
+        const progressBar = document.querySelector('.progress-bar');
+        const progressText = document.querySelector('.progress-text');
+        
+        // Execute the selected workflow
+        async function executeWorkflow() {
+            const selectedWorkflow = workflowSelect.value;
+            if (!selectedWorkflow) {
+                alert('Please select a workflow first');
+                return;
+            }
+            
+            // Collect parameters
+            const parameters = {};
+            
+            // Add the standard from/to parameters
+            const fromParam = document.getElementById('param-from').value;
+            const toParam = document.getElementById('param-to').value;
+            
+            if (fromParam) parameters['from'] = fromParam;
+            if (toParam) parameters['to'] = toParam;
+            
+            // Add custom parameters
+            const paramRows = parametersContainer.querySelectorAll('.parameter-row');
+            paramRows.forEach(row => {
+                const nameInput = row.querySelector('label input');
+                const valueInput = row.querySelector('input:not([type="text"]):not([placeholder="Parameter name"])') || 
+                                    row.querySelector('input:last-of-type');
+                
+                if (nameInput && valueInput && nameInput.value && nameInput.value !== 'from' && nameInput.value !== 'to') {
+                    parameters[nameInput.value] = valueInput.value;
+                }
+            });
+            
+            try {
+                runWorkflowBtn.disabled = true;
+                statusDisplay.textContent = 'Starting workflow...';
+                addLogEntry('Executing workflow: ' + selectedWorkflow);
+                
+                // Reset progress bar at the start
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                progressContainer.style.display = 'none';
+                
+                const response = await fetch(`${apiServerUrl}/execute_workflow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        workflow_filename: selectedWorkflow,
+                        parameters: parameters
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addLogEntry('Workflow started successfully: ' + data.message);
+                    statusDisplay.textContent = 'Workflow running...';
+                    
+                    // Start polling for status
+                    pollExecutionStatus();
+                } else {
+                    addLogEntry('Error: ' + data.message);
+                    statusDisplay.textContent = 'Error: ' + data.message;
+                    runWorkflowBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error executing workflow:', error);
+                addLogEntry('Error: ' + error.message);
+                statusDisplay.textContent = 'Error executing workflow';
+                runWorkflowBtn.disabled = false;
+            }
+        }
+        
+        // Poll for execution status
+        function pollExecutionStatus() {
+            const statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${apiServerUrl}/execution_status`);
+                    const status = await response.json();
+                    
+                    // Update status display
+                    if (status.running) {
+                        statusDisplay.textContent = 'Workflow running...';
+                        
+                        // Show and update progress bar
+                        progressContainer.style.display = 'block';
+                        
+                        // Handle progress updates (with a cap at 100% for display)
+                        const displayProgress = Math.min(status.progress || 0, 100);
+                        progressBar.style.width = `${displayProgress}%`;
+                        
+                        // Show the actual progress percentage (even if >100%)
+                        if (status.progress) {
+                            progressText.textContent = `${status.progress}% complete`;
+                            if (status.progress > 100) {
+                                progressText.textContent = `${status.progress}% (processing multiple steps)`;
+                            }
+                        } else {
+                            progressText.textContent = `Processing...`;
+                        }
+                    } else {
+                        statusDisplay.textContent = 'Workflow completed';
+                        // Keep progress bar visible but set to 100%
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Complete';
+                        
+                        clearInterval(statusInterval);
+                        runWorkflowBtn.disabled = false;
+                    }
+                    
+                    // Update log display
+                    updateLogDisplay(status.log);
+                    
+                    // Handle outputs
+                    const noOutputMessage = document.getElementById('no-output-message');
+                    const videoContainer = document.getElementById('video-container');
+                    const outputVideo = document.getElementById('output-video');
+                    
+                    // Check for video first (priority over image)
+                    if (status.last_video) {
+                        // Hide image, show video
+                        document.getElementById('output-image').style.display = 'none';
+                        videoContainer.style.display = 'block';
+                        noOutputMessage.style.display = 'none';
+                        
+                        // Set video source
+                        outputVideo.src = status.last_video.url;
+                        
+                        // Debug info
+                        console.log('Video details:', status.last_video);
+                        
+                        // Setup download button
+                        const downloadBtn = document.getElementById('download-video-btn');
+                        downloadBtn.onclick = function() {
+                            window.location.href = status.last_video.url + '&download=true';
+                        };
+                        
+                        // Add debug message to DOM
+                        const debugInfo = document.createElement('div');
+                        debugInfo.style.fontSize = '12px';
+                        debugInfo.style.color = '#666';
+                        debugInfo.innerHTML = `Video URL: ${status.last_video.url}<br>Filename: ${status.last_video.filename}`;
+                        videoContainer.appendChild(debugInfo);
+                        
+                        console.log('Video found:', status.last_video.filename);
+                    }
+                    // If no video but there's an image
+                    else if (status.last_image) {
+                        document.getElementById('output-image').src = status.last_image.url;
+                        document.getElementById('output-image').style.display = 'block';
+                        videoContainer.style.display = 'none';
+                        noOutputMessage.style.display = 'none';
+                    }
+                    // If no outputs at all
+                    else if (!status.running) {
+                        document.getElementById('output-image').style.display = 'none';
+                        videoContainer.style.display = 'none';
+                        noOutputMessage.style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                    statusDisplay.textContent = 'Error checking status';
+                    clearInterval(statusInterval);
+                    runWorkflowBtn.disabled = false;
+                }
+            }, 1000);
+        }
+        
+        // Update log display with new entries
+        function updateLogDisplay(logEntries) {
+            if (!Array.isArray(logEntries) || logEntries.length === 0) return;
+            
+            // Get the current number of entries
+            const currentEntries = executionLog.querySelectorAll('.log-entry').length;
+            
+            // Add new entries only
+            for (let i = currentEntries; i < logEntries.length; i++) {
+                addLogEntry(logEntries[i]);
+            }
+        }
+        
+        // Add a single log entry to the display
+        function addLogEntry(text) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = text;
+            executionLog.appendChild(entry);
+            executionLog.scrollTop = executionLog.scrollHeight;
+        }
+        
+        // Event listeners
+        refreshWorkflowsBtn.addEventListener('click', loadWorkflows);
+        runWorkflowBtn.addEventListener('click', executeWorkflow);
+        
+        // File upload functionality
+        document.getElementById('upload-workflow-btn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('workflow-file');
+            const uploadStatus = document.getElementById('upload-status');
+            
+            if (!fileInput.files.length) {
+                uploadStatus.textContent = 'Please select a file first';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            if (!file.name.endsWith('.json')) {
+                uploadStatus.textContent = 'Only JSON files are allowed';
+                return;
+            }
+            
+            // Create a FormData object for the file upload
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            uploadStatus.textContent = 'Uploading...';
+            
+            try {
+                const response = await fetch(`${apiServerUrl}/upload_workflow`, {
+                    method: 'POST',
+                    body: formData
+                    // Don't set Content-Type header - FormData will set it correctly with boundary
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    uploadStatus.textContent = 'Workflow uploaded successfully!';
+                    // Refresh the workflow list
+                    loadWorkflows();
+                } else {
+                    uploadStatus.textContent = `Error: ${result.message}`;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                uploadStatus.textContent = `Error uploading: ${error.message}`;
+            }
+        });
+        
+        // Add this script to handle the list videos button
+        document.getElementById('list-videos-btn').addEventListener('click', async function() {
+            const videoList = document.getElementById('video-list');
+            videoList.style.display = 'block';
+            videoList.innerHTML = 'Loading videos...';
+            
+            try {
+                const response = await fetch(`${apiServerUrl}/list_videos`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.videos.length > 0) {
+                    let html = '<ul style="padding-left: 20px;">';
+                    data.videos.forEach(video => {
+                        html += `<li>
+                            <a href="${video.url}" target="_blank">${video.filename}</a> 
+                            (${new Date(video.modified_time * 1000).toLocaleString()})
+                            <button onclick="loadVideo('${video.url}')">Load</button>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    videoList.innerHTML = html;
+                } else {
+                    videoList.innerHTML = 'No videos found';
+                }
+            } catch (error) {
+                videoList.innerHTML = `Error loading videos: ${error.message}`;
+            }
+        });
+        
+        function loadVideo(url) {
+            const outputVideo = document.getElementById('output-video');
+            outputVideo.src = url;
+            document.getElementById('video-container').style.display = 'block';
+            document.getElementById('output-image').style.display = 'none';
+            document.getElementById('no-output-message').style.display = 'none';
+        }
+        
+        // Initial setup
+        loadWorkflows();
+    </script>
+</body>
+</html> 
