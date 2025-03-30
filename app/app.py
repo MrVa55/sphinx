@@ -106,6 +106,7 @@ TRANSFORMATIONS = [
     {"transformation_from": "Controlling My Body", "transformation_to": "Listening to My Body"}
 ]
 
+TRANSFORMATION_PROMPTS = {}
 # Initialize a text-generation model for transformation analysis
 try:
     # Use a smaller model for efficiency

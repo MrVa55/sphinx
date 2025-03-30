@@ -38,7 +38,7 @@ def fetch_data():
                 if new_emotions != latest_emotion_scores and current_time - last_trigger_time >= min_trigger_interval:
                     latest_emotion_scores = new_emotions
                     print("✅ Updated emotion data:", latest_emotion_scores, flush=True)
-                    trigger_workflow()
+                    #trigger_workflow()
                     last_trigger_time = current_time
             
             # Get transformation
@@ -71,7 +71,7 @@ def fetch_data():
         time.sleep(3)
 
 # Start the background thread to poll the API
-threading.Thread(target=fetch_data, daemon=True).start()
+#threading.Thread(target=fetch_data, daemon=True).start()
 
 class SphinxImportNode:
     """

@@ -44,7 +44,7 @@ def fetch_data():
                     global_vars.set_emotions(latest_emotion_scores)
                     print("✅ Updated emotion data:", latest_emotion_scores, flush=True)
                     # Trigger workflow when emotions change
-                    trigger_workflow()
+                    #trigger_workflow()
                     last_trigger_time = current_time
             else:
                 print("⚠️ Emotions API error:", response.status_code, flush=True)
@@ -71,7 +71,7 @@ def fetch_data():
         time.sleep(3)
 
 # Start the background thread to poll the API
-threading.Thread(target=fetch_data, daemon=True).start()
+#threading.Thread(target=fetch_data, daemon=True).start()
 
 class EmotionImportNode:
     """

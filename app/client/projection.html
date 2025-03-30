@@ -1042,8 +1042,10 @@
         // Add this function to handle media updates (without changing any existing code)
         async function pollLatestMedia() {
             try {
+                console.log('Polling for media...');
                 const response = await fetch(`${apiServerUrl}/latest_media`);
                 const data = await response.json();
+                console.log('Media response:', data);
                 
                 if (data.status === 'success') {
                     if (data.type === 'video' && data.url) {
