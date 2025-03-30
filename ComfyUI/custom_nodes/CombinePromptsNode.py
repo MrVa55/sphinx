@@ -17,12 +17,12 @@ class CombinePromptsNode:
                 "emotion_scores": ("DICT", {"default": {}}),
                 "transformation_prompts": ("DICT", {"default": {}}),
                 "emotion_prompts": ("DICT", {"default": {}}),
-                "base_style": ("STRING", {"default": "cinematic lighting, high quality, detailed"}),
+                "base_style": ("STRING", {"default": "surreal, high quality, detailed"}),
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("combined_prompt",)
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("combined_prompt", "from_prompt", "to_prompt")
     FUNCTION = "combine_prompts"
     CATEGORY = "Sphinx"
 
@@ -54,28 +54,45 @@ class CombinePromptsNode:
         sorted_emotions = sorted(emotion_scores.items(), key=lambda x: x[1], reverse=True)
         top_emotions = [e[0] for e in sorted_emotions if e[1] >= 0.1][:2]  # Use top 2 significant emotions
         
-        # Get emotion prompts for top emotions
         emotion_prompt_parts = []
-        for emotion in top_emotions:
-            if emotion in emotion_prompts and emotion_prompts[emotion].strip():
-                emotion_prompt_parts.append(emotion_prompts[emotion].strip())
+        try:
+            # Get emotion prompts for top emotions
+            for emotion in top_emotions:
+                if emotion in emotion_prompts and emotion_prompts[emotion].strip():
+                    emotion_prompt_parts.append(emotion_prompts[emotion].strip())
+        except:
+            print(f"DEBUG: Error getting emotion prompts for {top_emotions}", flush=True)
         
         # Create coherent prompt structure
         # Main prompt is the transformation with emotional context and style
         combined_prompt = f"The main subject shows {trans_prompt}"
+
+                
+        # Create from prompt with emotional context
+        from_prompt = f"The main subject shows {transformation_from}"
+        
+        # Create to prompt with emotional context
+        to_prompt = f"The main subject shows {transformation_to}"
         
         # Add emotional context as background/mood
         if emotion_prompt_parts:
             emotion_text = " and ".join(emotion_prompt_parts)
             combined_prompt += f", with background and mood reflecting {emotion_text}"
+            from_prompt += f", with background and mood reflecting {emotion_text}"
+            to_prompt += f", with background and mood reflecting {emotion_text}"
         
         # Add style if provided
         if base_style:
             combined_prompt += f", {base_style}"
+            from_prompt += f", {base_style}"
+            to_prompt += f", {base_style}"
+
         
         print(f"DEBUG: Final combined prompt: {combined_prompt}", flush=True)
+        print(f"DEBUG: From prompt: {from_prompt}", flush=True)
+        print(f"DEBUG: To prompt: {to_prompt}", flush=True)
         
-        return (combined_prompt,)
+        return (combined_prompt, from_prompt, to_prompt)
 
 NODE_CLASS_MAPPINGS = {
     "CombinePromptsNode": CombinePromptsNode

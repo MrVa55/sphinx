@@ -7,17 +7,33 @@ import requests
 import time
 import threading
 import uuid
+import logging
 
 # Path to workflows directory
 WORKFLOWS_DIR = os.path.join(os.path.dirname(__file__), "workflows")
 
+# Set up logging
+logger = logging.getLogger("sphinx.workflow")
+
 # Global variables to track workflow execution
 currently_running = False
-execution_log = []
+execution_log = []  # Keep this for backward compatibility and UI display
 last_output_image = None
 last_output_video = None
 current_progress = 0
 client_id = None
+
+# Custom log handler that also adds messages to execution_log
+class ExecutionLogHandler(logging.Handler):
+    def emit(self, record):
+        message = self.format(record)
+        # Add to execution_log array for UI/API consumption
+        execution_log.append(message)
+        
+# Add the custom handler to the logger
+execution_log_handler = ExecutionLogHandler()
+execution_log_handler.setFormatter(logging.Formatter('%(message)s'))
+logger.addHandler(execution_log_handler)
 
 def load_workflow_from_file(filename):
     """
@@ -32,18 +48,18 @@ def load_workflow_from_file(filename):
         
         # Check if the file exists
         if not os.path.exists(workflow_path):
-            print(f"Workflow file not found: {workflow_path}")
+            logger.error(f"Workflow file not found: {workflow_path}")
             return None
         
         # Load the JSON data
         with open(workflow_path, 'r') as f:
             workflow_data = json.load(f)
             
-        print(f"Successfully loaded workflow from {workflow_path}")
+        logger.info(f"Successfully loaded workflow from {workflow_path}")
         return workflow_data
     
     except Exception as e:
-        print(f"Error loading workflow file: {e}")
+        logger.error(f"Error loading workflow file: {e}")
         return None
 
 def find_comfyui_url():
@@ -56,15 +72,15 @@ def find_comfyui_url():
     
     for url in possible_urls:
         try:
-            print(f"Testing connection to ComfyUI at: {url}")
+            logger.info(f"Testing connection to ComfyUI at: {url}")
             response = requests.get(f"{url}/system_stats", timeout=2)
             if response.status_code == 200:
-                print(f"Successfully connected to ComfyUI API at {url}")
+                logger.info(f"Successfully connected to ComfyUI API at {url}")
                 return url
         except Exception as e:
-            print(f"Could not connect to {url}: {e}")
+            logger.error(f"Could not connect to {url}: {e}")
     
-    print("No ComfyUI connection verified, using default URL")
+    logger.warning("No ComfyUI connection verified, using default URL")
     return "http://127.0.0.1:3020"
 
 def execute_workflow(workflow_filename, parameters=None):
@@ -73,12 +89,16 @@ def execute_workflow(workflow_filename, parameters=None):
     """
     global currently_running, execution_log, client_id, current_progress, last_output_image, last_output_video
     
-    print(f"custom_manager.execute_workflow called with: {workflow_filename}, parameters={parameters}")
+    logger.info(f"custom_manager.execute_workflow called with: {workflow_filename}, parameters={parameters}")
     
     # If a workflow is already running, force-terminate it
     if currently_running:
-        print("A workflow is already running, terminating previous workflow...")
-        execution_log.append("Terminating previous workflow to start a new one")
+        logger.info("A workflow is already running, cannot start a new one.")
+        
+        return {
+            "status": "error",
+            "message": "A workflow is already running, cannot start a new one"
+        }
     
     # Reset state
     currently_running = True
@@ -99,7 +119,7 @@ def execute_workflow(workflow_filename, parameters=None):
         daemon=True
     )
     thread.start()
-    print(f"Started execution thread for workflow {workflow_filename}")
+    logger.info(f"Started execution thread for workflow {workflow_filename}")
     
     return {
         "status": "success",
@@ -152,23 +172,73 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
         # Update workflow with parameters if provided
         if parameters:
             execution_log.append(f"Updating workflow with parameters: {parameters}")
+            logger.info(f"Updating workflow with parameters: {parameters}")
             try:
-                # This is a simple example - you'll need to modify based on your workflow structure
-                for node_id, node in workflow_data.get("nodes", {}).items():
-                    if "inputs" in node:
-                        for param_name, param_value in parameters.items():
-                            if param_name in node["inputs"]:
-                                node["inputs"][param_name] = param_value
-                                execution_log.append(f"Updated parameter {param_name} in node {node_id}")
+                # Specifically handle transformation parameters for the lumalabs.json workflow
+                if workflow_filename == "lumalabs.json":
+                    # Target the CombinePromptsNode which has ID "126" in lumalabs.json
+                    if "126" in workflow_data:
+                        node = workflow_data["126"]
+                        
+                        if "inputs" in node:
+                            # Check for transformation parameters
+                            if "transformation_from" in parameters and "transformation_from" in node["inputs"]:
+                                node["inputs"]["transformation_from"] = parameters["transformation_from"]
+                                execution_log.append(f"Updated transformation_from to: {parameters['transformation_from']}")
+                                logger.info(f"Updated transformation_from to: {parameters['transformation_from']}")
+                            
+                            if "transformation_to" in parameters and "transformation_to" in node["inputs"]:
+                                node["inputs"]["transformation_to"] = parameters["transformation_to"]
+                                execution_log.append(f"Updated transformation_to to: {parameters['transformation_to']}")
+                                logger.info(f"Updated transformation_to to: {parameters['transformation_to']}")
+                            
+                            # Handle legacy parameter names if needed
+                            if "from" in parameters and "transformation_from" in node["inputs"]:
+                                node["inputs"]["transformation_from"] = parameters["from"]
+                                execution_log.append(f"Updated transformation_from to: {parameters['from']} (from legacy 'from' parameter)")
+                                logger.info(f"Updated transformation_from to: {parameters['from']} (from legacy parameter)")
+                            
+                            if "to" in parameters and "transformation_to" in node["inputs"]:
+                                node["inputs"]["transformation_to"] = parameters["to"]
+                                execution_log.append(f"Updated transformation_to to: {parameters['to']} (from legacy 'to' parameter)")
+                                logger.info(f"Updated transformation_to to: {parameters['to']} (from legacy parameter)")
+                else:
+                    # Generic handling for other workflows
+                    for node_id, node in workflow_data.get("nodes", {}).items():
+                        if "inputs" in node:
+                            for param_name, param_value in parameters.items():
+                                if param_name in node["inputs"]:
+                                    node["inputs"][param_name] = param_value
+                                    execution_log.append(f"Updated parameter {param_name} in node {node_id}")
+                                    logger.info(f"Updated parameter {param_name} in node {node_id}")
             except Exception as e:
                 execution_log.append(f"Warning: Error updating parameters: {e}")
+                logger.warning(f"Error updating parameters: {e}")
                 # Continue with original workflow
         
         # Send the workflow to ComfyUI
         execution_log.append(f"Sending workflow to {comfyui_url}/prompt")
+        logger.info(f"Sending workflow to {comfyui_url}/prompt")
+        
+        # Check if workflow has the correct structure for ComfyUI
+        if "extra" in workflow_data and "prompt" in workflow_data["extra"]:
+            # Extract just the prompt part which is what ComfyUI expects
+            prompt_data = workflow_data["extra"]["prompt"]
+            execution_log.append(f"Using prompt data from workflow.extra.prompt section")
+        else:
+            # Assume it's already in the right format
+            prompt_data = workflow_data
+            execution_log.append(f"Using workflow data as-is")
+            
+        # Apply transformation parameters if present
+        if parameters and "from" in parameters and "to" in parameters:
+            execution_log.append(f"Applying transformation: {parameters['from']} -> {parameters['to']}")
+            # Logic to update specific nodes based on transformation could go here
+        
+        # Send the properly formatted prompt to ComfyUI
         response = requests.post(
             f"{comfyui_url}/prompt",
-            json={"prompt": workflow_data, "client_id": client_id}
+            json={"prompt": prompt_data, "client_id": client_id}
         )
         
         if response.status_code != 200:
@@ -321,6 +391,7 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
         execution_log.append(f"Error in workflow execution thread: {e}")
     
     finally:
+        logger.info("Workflow execution thread completed")
         currently_running = False
 
 def get_execution_status():
@@ -361,14 +432,14 @@ def check_workflow_nodes(workflow_data):
             response = requests.get(f"{comfyui_url}/object_info", timeout=3)
             if response.status_code != 200:
                 # If we can't get node info, assume workflow is valid
-                print(f"Warning: Couldn't get node info, status code: {response.status_code}")
+                logger.warning(f"Warning: Couldn't get node info, status code: {response.status_code}")
                 return True, []
             
             try:
                 available_nodes = response.json().get("object_info", {}).keys()
             except json.JSONDecodeError:
                 # If we can't parse the response, assume workflow is valid
-                print(f"Warning: Invalid JSON response from /object_info")
+                logger.warning(f"Warning: Invalid JSON response from /object_info")
                 return True, []
                 
             # Check each node in the workflow
@@ -381,51 +452,43 @@ def check_workflow_nodes(workflow_data):
             return len(missing_nodes) == 0, missing_nodes
         except Exception as e:
             # If there's any error checking nodes, just assume the workflow is valid
-            print(f"Warning: Error checking nodes: {e}")
+            logger.warning(f"Warning: Error checking nodes: {e}")
             return True, []
             
     except Exception as e:
-        print(f"Warning: Error in check_workflow_nodes: {e}")
+        logger.warning(f"Warning: Error in check_workflow_nodes: {e}")
         return True, []  # Assume workflow is valid if we can't check
 
 # Test if run directly
 if __name__ == "__main__":
     # List available workflows
     workflows = get_available_workflows()
-    print("Available workflows:", workflows)
+    logger.info("Available workflows: %s", workflows)
     
     if workflows["status"] == "success" and workflows["workflows"]:
         # Execute the first workflow
         workflow_file = workflows["workflows"][0]
-        print(f"Executing workflow: {workflow_file}")
+        logger.info(f"Executing workflow: %s", workflow_file)
         
         result = execute_workflow(workflow_file)
-        print("Execution started:", result)
+        logger.info("Execution started: %s", result)
         
         # Monitor execution
         while currently_running:
             status = get_execution_status()
-            print(f"Running: {len(status['log'])} log entries")
+            logger.info(f"Running: %d log entries", len(status['log']))
             time.sleep(2)
         
         # Print final status
         final_status = get_execution_status()
-        print("\nExecution completed")
-        print("Log:")
+        logger.info("\nExecution completed")
+        logger.info("Log:")
         for entry in final_status["log"]:
-            print(f"  {entry}")
+            logger.info(f"  %s", entry)
         
         if final_status["last_image"]:
-            print(f"\nOutput image: {final_status['last_image']['url']}")
+            logger.info(f"\nOutput image: %s", final_status['last_image']['url'])
         if final_status["last_video"]:
-            print(f"\nOutput video: {final_status['last_video']['url']}")
+            logger.info(f"\nOutput video: %s", final_status['last_video']['url'])
     else:
-        print("No workflows available")
-
-# At the top of the WebSocket handler, add this for debugging
-try:
-    # Log raw WebSocket data for the first few messages
-    if len(execution_log) < 20:  # Only for the first few messages to avoid flooding
-        execution_log.append(f"Raw WS data: {message[:100]}...")  # Log first 100 chars
-except:
-    pass
+        logger.info("No workflows available")

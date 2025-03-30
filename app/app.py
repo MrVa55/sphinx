@@ -1,7 +1,8 @@
 import whisper
 import tempfile
 import os
-from fastapi import FastAPI, File, UploadFile, Request, HTTPException
+import logging
+from fastapi import FastAPI, File, UploadFile, Request, HTTPException, Depends
 from transformers import pipeline
 import torch
 import uvicorn
@@ -15,6 +16,21 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import json
 import time
+from typing import Callable
+import inspect
+from functools import wraps
+from pydantic import BaseModel
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("api.log")
+    ]
+)
+logger = logging.getLogger("sphinx-api")
 
 app = FastAPI()
 
@@ -31,6 +47,30 @@ app.add_middleware(
 # Global variable to store the latest emotion scores
 latest_emotion_scores = {}
 
+# Create API logging dependency
+async def log_api_call(request: Request):
+    """
+    Dependency that logs information about the API call.
+    Use with Depends() in route functions.
+    """
+    # Get the calling function name
+    frame = inspect.currentframe().f_back
+    function_name = frame.f_code.co_name if frame else "unknown_function"
+    
+    # Log route and method
+    logger.info(f"API call: {request.method} {request.url.path} → {function_name}")
+    
+    # Log query parameters
+    if request.query_params:
+        logger.info(f"Query params: {dict(request.query_params)}")
+    
+    # For POST/PUT, we used to try to log body content but that consumes the request body
+    # Now we just log that there is a request body but don't consume it
+    if request.method in ("POST", "PUT"):
+        logger.info("Request has a body (not logged to avoid consuming it)")
+    
+    return None  # This dependency doesn't modify the request
+
 # Load models
 whisper_model = whisper.load_model("base")
 emotion_classifier = pipeline(
@@ -45,25 +85,25 @@ from transformers import pipeline
 
 # Add this global variable to store transformations
 TRANSFORMATIONS = [
-    {"from": "Closed off", "to": "Open"},
-    {"from": "Stagnant", "to": "Creative"},
-    {"from": "Fearful", "to": "Trusting"},
-    {"from": "Hiding", "to": "Visible"},
-    {"from": "Uncentered", "to": "Centered"},
-    {"from": "Silenced", "to": "Honest"},
-    {"from": "Disassociated", "to": "Embodied"},
-    {"from": "Ruminating", "to": "Present"},
-    {"from": "Hypervigilant", "to": "Relaxed"},
-    {"from": "Illness", "to": "Health"},
-    {"from": "Oppression", "to": "Freedom"},
-    {"from": "Scarcity", "to": "Abundance"},
-    {"from": "Controlling", "to": "Flexible"},
-    {"from": "Codependent", "to": "Authentic Autonomy"},
-    {"from": "Feeling Excluded", "to": "Belonging"},
-    {"from": "Safety & Comfort", "to": "Embracing Transformation"},
-    {"from": "Shame", "to": "Healthy Pride"},
-    {"from": "External Validation", "to": "Wholeness"},
-    {"from": "Controlling My Body", "to": "Listening to My Body"}
+    {"transformation_from": "Closed off", "transformation_to": "Open"},
+    {"transformation_from": "Stagnant", "transformation_to": "Creative"},
+    {"transformation_from": "Fearful", "transformation_to": "Trusting"},
+    {"transformation_from": "Hiding", "transformation_to": "Visible"},
+    {"transformation_from": "Uncentered", "transformation_to": "Centered"},
+    {"transformation_from": "Silenced", "transformation_to": "Honest"},
+    {"transformation_from": "Disassociated", "transformation_to": "Embodied"},
+    {"transformation_from": "Ruminating", "transformation_to": "Present"},
+    {"transformation_from": "Hypervigilant", "transformation_to": "Relaxed"},
+    {"transformation_from": "Illness", "transformation_to": "Health"},
+    {"transformation_from": "Oppression", "transformation_to": "Freedom"},
+    {"transformation_from": "Scarcity", "transformation_to": "Abundance"},
+    {"transformation_from": "Controlling", "transformation_to": "Flexible"},
+    {"transformation_from": "Codependent", "transformation_to": "Authentic Autonomy"},
+    {"transformation_from": "Feeling Excluded", "transformation_to": "Belonging"},
+    {"transformation_from": "Safety & Comfort", "transformation_to": "Embracing Transformation"},
+    {"transformation_from": "Shame", "transformation_to": "Healthy Pride"},
+    {"transformation_from": "External Validation", "transformation_to": "Wholeness"},
+    {"transformation_from": "Controlling My Body", "transformation_to": "Listening to My Body"}
 ]
 
 # Initialize a text-generation model for transformation analysis
@@ -96,7 +136,10 @@ workflow_status = {
     "completed": False
 }
 
-@app.get("/", response_class=HTMLResponse)
+class TransformationRequest(BaseModel):
+    transformation: dict = None
+
+@app.get("/", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def get_index():
     """Serve the projection experience as the main entry point."""
     try:
@@ -113,7 +156,7 @@ async def get_index():
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")
 
-@app.get("/gui", response_class=HTMLResponse)
+@app.get("/gui", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def get_gui():
     """Serve the GUI dashboard."""
     try:
@@ -129,7 +172,7 @@ async def get_gui():
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error: {str(e)}</h1>")
 
-@app.post("/transcribe_and_generate")
+@app.post("/transcribe_and_generate", dependencies=[Depends(log_api_call)])
 async def transcribe_and_generate(file: UploadFile = File(...)):
     """Transcribe audio and generate a response"""
     global latest_emotion_scores
@@ -143,7 +186,7 @@ async def transcribe_and_generate(file: UploadFile = File(...)):
         # Transcribe the audio
         result = whisper_model.transcribe(temp_file.name)
         transcription = result["text"]
-        print(f"Transcription: {transcription}")
+        logger.info(f"Transcription: {transcription}")
         
         # Save the transcription for reference
         cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -182,44 +225,83 @@ async def transcribe_and_generate(file: UploadFile = File(...)):
         import traceback
         return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
-@app.get("/get_emotion_data")
+@app.get("/get_emotion_data", dependencies=[Depends(log_api_call)])
 async def get_emotion_data():
     """
     Return the latest emotion data for the ComfyUI custom node to consume.
     """
     return {"emotions": latest_emotion_scores}
 
-@app.post("/trigger_workflow")
-async def trigger_workflow(request: Request = None, transformation: dict = None):
-    """Trigger a workflow execution with optional transformation data"""
+@app.post("/trigger_workflow", dependencies=[Depends(log_api_call)])
+async def trigger_workflow(request_data: TransformationRequest = None, request: Request = None):
+    """Trigger a workflow execution with transformation data"""
+    # Use a static flag to prevent multiple executions in a short time period
+    global _last_workflow_trigger_time
+    
     try:
-        print("Triggering workflow execution")
+        logger = logging.getLogger("api.trigger_workflow")
+
+        logger.info(f"Request data: {request_data}")
+        logger.info(f"Request headers: {request.headers}")
         
-        # If transformation data was provided in the request
-        if request and not transformation:
+        # Add rate limiting to prevent multiple executions
+        current_time = time.time()
+        if hasattr(trigger_workflow, '_last_execution_time') and current_time - trigger_workflow._last_execution_time < 10.0:
+            logger.info("Ignoring duplicate workflow trigger (rate limited)")
+            return {"status": "ignored", "message": "Duplicate request ignored (rate limited)"}
+        
+        # Set last execution time
+        trigger_workflow._last_execution_time = current_time
+
+        # Extract transformation from the request
+        transformation = None
+        if request_data and request_data.transformation:
+            transformation = request_data.transformation
+            logger.info(f"Received transformation data from JSON body: {transformation}")
+        
+        # If no transformation was provided in JSON, try to read from raw request
+        if not transformation and request:
             try:
-                data = await request.json()
-                transformation = data.get("transformation")
-                print(f"Received transformation data: {transformation}")
+                # Read the raw body
+                body = await request.body()
+                logger.debug(f"Raw request body: {body}")
+                logger.debug(f"Content-Type: {request.headers.get('content-type')}")
+                
+                # Parse the body as JSON if it's not empty
+                if body:
+                    try:
+                        data = json.loads(body)
+                        logger.debug(f"Parsed JSON data: {data}")  # Log the full parsed data structure
+                        
+                        # Check for transformation in different possible structures
+                        if isinstance(data, dict):
+                            if 'transformation' in data:
+                                transformation = data['transformation']
+                                logger.info(f"Found transformation in first level: {transformation}")
+                            elif 'transformation_from' in data and 'transformation_to' in data:
+                                transformation = data
+                                logger.info(f"Found direct transformation fields: {transformation}")
+                    except json.JSONDecodeError as json_err:
+                        logger.error(f"JSON parse error: {json_err}")
+                        logger.debug(f"Request body content: {body.decode('utf-8', errors='replace')}")
             except Exception as e:
-                print(f"Error parsing request JSON: {e}")
-                pass
+                logger.error(f"Error processing request: {e}")
         
         # If no transformation was provided, use a default
         if not transformation:
             transformation = {
-                "from": "Fearful", 
-                "to": "Trusting"
+                "transformation_from": "Fearful", 
+                "transformation_to": "Trusting"
             }
-            print("Using default transformation")
+            logger.info("Using default transformation")
         else:
-            print(f"Using provided transformation: {transformation}")
+            logger.info(f"Using provided transformation: {transformation}")
             
         # Use the correct workflow file
-        workflow_file = "12v_sphinx3_api.json"
+        workflow_file = "lumalabs.json"
         
         # Execute using custom_manager
-        print(f"Executing workflow {workflow_file} with transformation {transformation}")
+        logger.info(f"Executing workflow {workflow_file} with transformation {transformation}")
         result = custom_manager.execute_workflow(workflow_file, transformation)
         
         # Save the current transformation for reference
@@ -234,11 +316,11 @@ async def trigger_workflow(request: Request = None, transformation: dict = None)
     
     except Exception as e:
         import traceback
-        print(f"Error in trigger_workflow: {e}")
-        print(traceback.format_exc())
+        logger.error(f"Error in trigger_workflow: {e}")
+        logger.error(traceback.format_exc())
         return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
-@app.get("/client/script.js", response_class=HTMLResponse)
+@app.get("/client/script.js", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def get_script_js():
     """Serve the script.js file."""
     try:
@@ -263,7 +345,7 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 client_dir = os.path.join(app_dir, "client")
 app.mount("/client", StaticFiles(directory=client_dir), name="client")
 
-@app.get("/proxy/comfyui/history")
+@app.get("/proxy/comfyui/history", dependencies=[Depends(log_api_call)])
 async def proxy_comfyui_history():
     """Proxy for ComfyUI history endpoint to avoid CORS issues"""
     try:
@@ -273,7 +355,7 @@ async def proxy_comfyui_history():
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/proxy/comfyui/view")
+@app.get("/proxy/comfyui/view", dependencies=[Depends(log_api_call)])
 async def proxy_comfyui_view(filename: str, type: str):
     """Proxy for ComfyUI image view endpoint to avoid CORS issues"""
     try:
@@ -283,7 +365,7 @@ async def proxy_comfyui_view(filename: str, type: str):
     except Exception as e:
         return Response(content=b"Error loading image", media_type="text/plain", status_code=500)
 
-@app.post("/analyze_transformation")
+@app.post("/analyze_transformation", dependencies=[Depends(log_api_call)])
 async def analyze_transformation(request: dict):
     """
     Analyze the text to determine the most appropriate transformation.
@@ -325,7 +407,7 @@ async def analyze_transformation(request: dict):
                 if not transformation:
                     transformation = rule_based_transformation(text, emotions)
         except Exception as e:
-            print(f"Error in text generation: {e}")
+            logger.error(f"Error in text generation: {e}")
             transformation = rule_based_transformation(text, emotions)
     else:
         # Fallback to rule-based method
@@ -381,7 +463,7 @@ def extract_transformation(text):
             return t
     return None
 
-@app.post("/upload_workflow")
+@app.post("/upload_workflow", dependencies=[Depends(log_api_call)])
 async def upload_workflow(file: UploadFile = File(...)):
     """
     Upload a workflow JSON file to the workflows directory
@@ -421,7 +503,7 @@ async def upload_workflow(file: UploadFile = File(...)):
         import traceback
         return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
-@app.post("/trigger_video_transformation")
+@app.post("/trigger_video_transformation", dependencies=[Depends(log_api_call)])
 async def trigger_video_transformation(request: dict):
     """
     Trigger the ComfyUI workflow to generate a transformation video.
@@ -463,12 +545,12 @@ async def trigger_video_transformation(request: dict):
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
-@app.get("/list_workflows")
+@app.get("/list_workflows", dependencies=[Depends(log_api_call)])
 async def list_workflows():
     """List all available workflow files"""
     return custom_manager.get_available_workflows()
 
-@app.post("/execute_workflow")
+@app.post("/execute_workflow", dependencies=[Depends(log_api_call)])
 async def execute_workflow(request: Request):
     """Execute a workflow file with optional parameters"""
     try:
@@ -487,7 +569,7 @@ async def execute_workflow(request: Request):
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
-@app.get("/execution_status")
+@app.get("/execution_status", dependencies=[Depends(log_api_call)])
 async def get_execution_status():
     """Get the current workflow execution status"""
     try:
@@ -505,12 +587,12 @@ async def get_execution_status():
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/workflows", response_class=HTMLResponse)
+@app.get("/workflows", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def serve_workflows_page():
     """Serve the workflows page"""
     return get_html_content("client/workflows.html")
 
-@app.get("/workflow_tester", response_class=HTMLResponse)
+@app.get("/workflow_tester", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def serve_workflow_tester():
     """Serve the workflow tester page"""
     try:
@@ -538,7 +620,7 @@ async def serve_workflow_tester():
         </html>
         """)
 
-@app.get("/api_status")
+@app.get("/api_status", dependencies=[Depends(log_api_call)])
 async def api_status():
     """Return a list of all registered API endpoints for debugging"""
     try:
@@ -565,7 +647,7 @@ async def api_status():
         error_traceback = traceback.format_exc()
         return {"status": "error", "message": str(e), "traceback": error_traceback}
 
-@app.get("/debug_logs")
+@app.get("/debug_logs", dependencies=[Depends(log_api_call)])
 async def get_debug_logs():
     """Get the debug logs"""
     try:
@@ -581,7 +663,7 @@ async def get_debug_logs():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/test_comfyui")
+@app.get("/test_comfyui", dependencies=[Depends(log_api_call)])
 async def test_comfyui():
     """Test the ComfyUI connection"""
     try:
@@ -595,7 +677,7 @@ async def test_comfyui():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/workflow_status")
+@app.get("/workflow_status", dependencies=[Depends(log_api_call)])
 async def get_workflow_status():
     """Get the current status of the running workflow"""
     global workflow_status
@@ -607,7 +689,7 @@ async def get_workflow_status():
         
     return workflow_status
 
-@app.get("/latest_video")
+@app.get("/latest_video", dependencies=[Depends(log_api_call)])
 async def get_latest_video():
     """Get the latest video file generated by ComfyUI"""
     try:
@@ -655,7 +737,7 @@ async def get_latest_video():
         import traceback
         return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
-@app.get("/serve_video")
+@app.get("/serve_video", dependencies=[Depends(log_api_call)])
 async def serve_video(path: str, download: bool = False):
     """Serve a video file from the ComfyUI output directory"""
     if not os.path.exists(path):
@@ -674,7 +756,7 @@ async def serve_video(path: str, download: bool = False):
     
     return FileResponse(path, media_type="video/mp4", headers=headers)
 
-@app.get("/latest_transformation")
+@app.get("/latest_transformation", dependencies=[Depends(log_api_call)])
 async def get_latest_transformation():
     """Retrieve the latest transformation that was applied"""
     cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -687,7 +769,7 @@ async def get_latest_transformation():
     else:
         raise HTTPException(status_code=404, detail="No transformation found")
 
-@app.get("/custom_gui", response_class=HTMLResponse)
+@app.get("/custom_gui", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
 async def serve_custom_gui():
     """Serve the custom GUI page"""
     try:
@@ -705,7 +787,7 @@ async def serve_custom_gui():
         error_traceback = traceback.format_exc()
         return HTMLResponse(content=f"<h1>Error: {str(e)}</h1><pre>{error_traceback}</pre>")
 
-@app.get("/download_video")
+@app.get("/download_video", dependencies=[Depends(log_api_call)])
 async def download_video(filename: str):
     """Download a video by filename from the ComfyUI output directory"""
     # Search for the file in the output directory
@@ -723,7 +805,7 @@ async def download_video(filename: str):
     
     return {"status": "error", "message": f"Video not found: {filename}"}
 
-@app.get("/list_videos")
+@app.get("/list_videos", dependencies=[Depends(log_api_call)])
 async def list_videos():
     """List all video files in the ComfyUI output directory"""
     try:
@@ -748,7 +830,7 @@ async def list_videos():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/latest_media")
+@app.get("/latest_media", dependencies=[Depends(log_api_call)])
 async def get_latest_media():
     """Get the latest generated media (video or image)"""
     try:

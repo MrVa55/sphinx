@@ -43,7 +43,7 @@ def run_workflow_with_custom_nodes(comfyui_url):
             # Use the EXACT node names from the source files
             emotion_import_node = "Emotion Import"
             emotions_prompts_node = "EmotionsPromptsInputNode"  
-            combine_node = "CombineEmotionPromptsNode"
+            combine_node = "CombinePromptsNode"
             
             # Get the current timestamp for a unique seed
             seed = int(time.time()) % 1000000000
@@ -147,7 +147,7 @@ def run_workflow_with_custom_nodes(comfyui_url):
                     "class_type": emotions_prompts_node,
                     "inputs": emotion_visual_prompts
                 },
-                # CombineEmotionPromptsNode with required inputs
+                # CombinePromptsNode with required inputs
                 "11": {
                     "class_type": combine_node,
                     "inputs": {

@@ -703,8 +703,11 @@
         }
         
         // Send audio to server for processing
+        let transcriptionHandled = false; // Flag to track if handleTranscription has been called
+        
         async function sendAudioToServer(audioBlob) {
             try {
+                // Create form data to send the audio file
                 const formData = new FormData();
                 formData.append('file', audioBlob);
                 
@@ -735,8 +738,12 @@
                     showTransformationActivated();
                 }
                 
-                // Add this after the successful transcription response
-                handleTranscription(data);
+                // Call handleTranscription only once after the first audio processing
+                if (!transcriptionHandled) {
+                    handleTranscription(data);
+                    transcriptionHandled = true; // Set flag to true so it won't be called again
+                    console.log("handleTranscription called for the first time");
+                }
             } catch (error) {
                 console.error("Error sending audio to server:", error);
             }
@@ -878,8 +885,8 @@
             const progressBar = document.getElementById('transform-progress');
             
             // Update the transformation text
-            fromElement.textContent = transformation.from.toUpperCase();
-            toElement.textContent = transformation.to.toUpperCase();
+            fromElement.textContent = transformation.transformation_from.toUpperCase();
+            toElement.textContent = transformation.transformation_to.toUpperCase();
             
             // Show the container
             container.classList.add('visible');
@@ -1079,9 +1086,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        transformation: data.transformation
-                    })
+                    body: JSON.stringify(data)  // Send transformation object directly without nesting
                 })
                 .then(response => response.json())
                 .then(result => {
@@ -1097,4 +1102,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

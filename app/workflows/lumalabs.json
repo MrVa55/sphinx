@@ -1,0 +1,345 @@
+{
+  "61": {
+    "inputs": {
+      "admiration": "red",
+      "amusement": "blue",
+      "anger": "red",
+      "annoyance": "a cockroach",
+      "approval": "clouds",
+      "caring": "a hug",
+      "confusion": "confusion",
+      "curiosity": "discovering something",
+      "desire": "lust",
+      "disappointment": "broken glass",
+      "disapproval": "thunderclouds",
+      "disgust": "vomit",
+      "embarrassment": "shy face",
+      "excitement": "celebrations and baloons",
+      "fear": "darkness",
+      "gratitude": "gifts and presents",
+      "grief": "wiltering flower",
+      "joy": "smile and dances",
+      "love": "hearts",
+      "nervousness": "shaking",
+      "optimism": "blue skies",
+      "pride": "standing straight",
+      "realization": "lightbulb",
+      "relief": "rain",
+      "remorse": "regret",
+      "sadness": "blue",
+      "surprise": "rainbows and unicorns"
+    },
+    "class_type": "EmotionsPromptsInputNode",
+    "_meta": {
+      "title": "Emotion Prompts Input Node"
+    }
+  },
+  "64": {
+    "inputs": {},
+    "class_type": "Emotion Import",
+    "_meta": {
+      "title": "Emotion Import Node"
+    }
+  },
+  "98": {
+    "inputs": {
+      "text": [
+        "107",
+        0
+      ],
+      "text2": "The man's eyes slowly lift off the ground, his gaze drifting towards the horizon as he takes a deep breath, his chest expanding with a mix of anxiety and determination. His head begins to tilt, his chin tilting upwards, as if defying the weight of his surroundings. His shoulders relax, and his posture straightens, a subtle shift in his stance indicating a growing sense of resolve. The camera zooms in on his face, capturing the subtle changes in his facial structure, as his jawline sets in a firm line, and his eyes, once sunken, now shine with a hint of defiance. The lighting shifts, with warm golden hues creeping in, casting a sense of optimism over the desolate landscape. The camera pans out, revealing the crumbling building in the background, its clock faces frozen in time, as the man's figure remains resolute, his back to the viewer, a symbol of his inner transformation. The scene is computer-generated imagery.."
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "102": {
+    "inputs": {
+      "text": [
+        "121",
+        0
+      ],
+      "text2": "surreal style, a peaceful japanese garden"
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "104": {
+    "inputs": {
+      "prompt": [
+        "107",
+        0
+      ],
+      "model": "ray-2",
+      "duration": "5s",
+      "loop": false,
+      "resolution": "540p",
+      "save": true,
+      "init_image_url": [
+        "105",
+        0
+      ],
+      "final_image_url": [
+        "115",
+        0
+      ],
+      "filename": "",
+      "gen_output": "db79c8ea-6392-443d-8d05-ad1829620f57",
+      "client": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "LumaImage2Video",
+    "_meta": {
+      "title": "Image to Video"
+    }
+  },
+  "105": {
+    "inputs": {
+      "model": "photon-1",
+      "prompt": [
+        "126",
+        1
+      ],
+      "aspect_ratio": "9:16",
+      "filename": "",
+      "gen_output": "f0477d65-33f3-466b-b944-524778f7a894",
+      "client": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "LumaImageGeneration",
+    "_meta": {
+      "title": "Image Generation"
+    }
+  },
+  "106": {
+    "inputs": {
+      "api_key": "luma-4cfccee9-331c-4e50-b885-096d14cf7f09-93aa60d4-3710-49e6-b256-8db33e92752c"
+    },
+    "class_type": "LumaAIClient",
+    "_meta": {
+      "title": "LumaAI Client"
+    }
+  },
+  "107": {
+    "inputs": {
+      "prompt": [
+        "126",
+        0
+      ],
+      "max_resulting_tokens": 256,
+      "prompt_enhancer": [
+        "108",
+        0
+      ],
+      "image_prompt": [
+        "105",
+        2
+      ]
+    },
+    "class_type": "LTXVPromptEnhancer",
+    "_meta": {
+      "title": "🅛🅣🅧 LTXV Prompt Enhancer"
+    }
+  },
+  "108": {
+    "inputs": {
+      "llm_name": "unsloth/Llama-3.2-3B-Instruct",
+      "image_captioner_name": "MiaoshouAI/Florence-2-large-PromptGen-v2.0"
+    },
+    "class_type": "LTXVPromptEnhancerLoader",
+    "_meta": {
+      "title": "🅛🅣🅧 LTXV Prompt Enhancer Loader"
+    }
+  },
+  "109": {
+    "inputs": {
+      "video_url": [
+        "104",
+        0
+      ],
+      "$$comfy_animation_preview": {
+        "height": 768
+      }
+    },
+    "class_type": "LumaPreviewVideo",
+    "_meta": {
+      "title": "LumaAI Preview Video"
+    }
+  },
+  "110": {
+    "inputs": {
+      "images": [
+        "105",
+        2
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "115": {
+    "inputs": {
+      "model": "photon-1",
+      "prompt": [
+        "126",
+        2
+      ],
+      "aspect_ratio": "9:16",
+      "filename": "",
+      "gen_output": "ee7ba083-5c49-4d95-a0af-00a86705a1d9",
+      "client": [
+        "106",
+        0
+      ],
+      "style_ref": [
+        "131",
+        0
+      ]
+    },
+    "class_type": "LumaImageGeneration",
+    "_meta": {
+      "title": "Image Generation"
+    }
+  },
+  "118": {
+    "inputs": {
+      "text": "surreal style, a chaotic tangled garden",
+      "text_b": "surreal style, a peaceful japanese garden",
+      "text_c": "",
+      "text_d": ""
+    },
+    "class_type": "Text String",
+    "_meta": {
+      "title": "Text String"
+    }
+  },
+  "119": {
+    "inputs": {
+      "images": [
+        "115",
+        2
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "121": {
+    "inputs": {
+      "delimiter": ", ",
+      "clean_whitespace": "true",
+      "text_b": [
+        "118",
+        1
+      ]
+    },
+    "class_type": "Text Concatenate",
+    "_meta": {
+      "title": "Text Concatenate"
+    }
+  },
+  "123": {
+    "inputs": {
+      "text": [
+        "104",
+        0
+      ],
+      "text2": "https://storage.cdn-luma.com/dream_machine/c96503a9-895b-441b-8d28-3c7f261c0fd0/0fdbcd20-9c0e-44ca-af8a-80f3a44ff6f1_result16b84964c223b124.mp4"
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "126": {
+    "inputs": {
+      "transformation_from": "fear of failure",
+      "transformation_to": "confidence",
+      "base_style": "surreal, high detail",
+      "emotion_scores": [
+        "127",
+        0
+      ],
+      "transformation_prompts": [
+        "61",
+        0
+      ],
+      "emotion_prompts": [
+        "64",
+        0
+      ]
+    },
+    "class_type": "CombinePromptsNode",
+    "_meta": {
+      "title": "Combine Emotion & Transformation Prompts into overall prompt"
+    }
+  },
+  "127": {
+    "inputs": {},
+    "class_type": "Emotion Import",
+    "_meta": {
+      "title": "Emotion Import Node"
+    }
+  },
+  "128": {
+    "inputs": {
+      "text": [
+        "126",
+        0
+      ],
+      "text2": "The main subject shows transformation from fear of failure to confidence, surreal, high detail"
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "129": {
+    "inputs": {
+      "text": [
+        "126",
+        1
+      ],
+      "text2": "The main subject shows fear of failure, surreal, high detail"
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "130": {
+    "inputs": {
+      "text": [
+        "126",
+        2
+      ],
+      "text2": "The main subject shows confidence, surreal, high detail"
+    },
+    "class_type": "ShowText|pysssss",
+    "_meta": {
+      "title": "Show Text 🐍"
+    }
+  },
+  "131": {
+    "inputs": {
+      "image_url": [
+        "105",
+        0
+      ],
+      "weight": 0.6000000000000001
+    },
+    "class_type": "Reference",
+    "_meta": {
+      "title": "Reference"
+    }
+  }
+}
