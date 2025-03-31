@@ -11,7 +11,6 @@ import requests
 import sys
 sys.path.append('/workspace/app')
 import workflow_manager
-import custom_manager
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import json
@@ -303,7 +302,7 @@ async def trigger_workflow(request_data: TransformationRequest = None, request: 
         
         # Execute using custom_manager
         logger.info(f"Executing workflow {workflow_file} with transformation {transformation}")
-        result = custom_manager.execute_workflow(workflow_file, transformation)
+        result = workflow_manager.execute_workflow(workflow_file, transformation)
         
         # Save the current transformation for reference
         cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -549,7 +548,7 @@ async def trigger_video_transformation(request: dict):
 @app.get("/list_workflows", dependencies=[Depends(log_api_call)])
 async def list_workflows():
     """List all available workflow files"""
-    return custom_manager.get_available_workflows()
+    return workflow_manager.get_available_workflows()
 
 @app.post("/execute_workflow", dependencies=[Depends(log_api_call)])
 async def execute_workflow(request: Request):
@@ -562,7 +561,7 @@ async def execute_workflow(request: Request):
         if not workflow_filename:
             return {"status": "error", "message": "Missing workflow_filename parameter"}
         
-        result = custom_manager.execute_workflow(workflow_filename, parameters)
+        result = workflow_manager.execute_workflow(workflow_filename, parameters)
         return result
     
     except Exception as e:
@@ -574,7 +573,7 @@ async def execute_workflow(request: Request):
 async def get_execution_status():
     """Get the current workflow execution status"""
     try:
-        status = custom_manager.get_execution_status()
+        status = workflow_manager.get_execution_status()
         
         # Add transcription data if available
         cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -770,12 +769,12 @@ async def get_latest_transformation():
     else:
         raise HTTPException(status_code=404, detail="No transformation found")
 
-@app.get("/custom_gui", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
-async def serve_custom_gui():
+@app.get("/workflow_manager", response_class=HTMLResponse, dependencies=[Depends(log_api_call)])
+async def serve_workflow_manager():
     """Serve the custom GUI page"""
     try:
         app_dir = os.path.dirname(os.path.abspath(__file__))
-        gui_path = os.path.join(app_dir, "client", "custom_gui.html")
+        gui_path = os.path.join(app_dir, "client", "workflow_manager.html")
         
         if os.path.exists(gui_path):
             with open(gui_path, "r") as f:
@@ -836,7 +835,7 @@ async def get_latest_media():
     """Get the latest generated media (video or image)"""
     try:
         # Get the status from custom_manager
-        status = custom_manager.get_execution_status()
+        status = workflow_manager.get_execution_status()
         
         # Get the latest transcription if available
         transcription = None

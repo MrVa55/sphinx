@@ -1,7 +1,8 @@
-{
+mkdir -p /workspace/app/workflows
+echo '{
   "3": {
     "inputs": {
-      "seed": 156680208700286,
+      "seed": 23215125,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -24,19 +25,13 @@
         0
       ]
     },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
+    "class_type": "KSampler"
   },
   "4": {
     "inputs": {
-      "ckpt_name": "LTXV/ltx-video-2b-v0.9.5.safetensors"
+      "ckpt_name": "dreamshaper_8.safetensors"
     },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
+    "class_type": "CheckpointLoaderSimple"
   },
   "5": {
     "inputs": {
@@ -44,36 +39,27 @@
       "height": 512,
       "batch_size": 1
     },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Empty Latent Image"
-    }
+    "class_type": "EmptyLatentImage"
   },
   "6": {
     "inputs": {
-      "text": "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
+      "text": "a beautiful forest with sunlight streaming through the trees, award winning, breathtaking, realistic, photograph",
       "clip": [
         "4",
         1
       ]
     },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
+    "class_type": "CLIPTextEncode"
   },
   "7": {
     "inputs": {
-      "text": "text, watermark",
+      "text": "bad, ugly, deformed, malformed, low quality, text, signature",
       "clip": [
         "4",
         1
       ]
     },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
+    "class_type": "CLIPTextEncode"
   },
   "8": {
     "inputs": {
@@ -86,10 +72,7 @@
         2
       ]
     },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
+    "class_type": "VAEDecode"
   },
   "9": {
     "inputs": {
@@ -99,9 +82,6 @@
         0
       ]
     },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Save Image"
-    }
+    "class_type": "SaveImage"
   }
-}
+}' > /workspace/app/workflows/default.json
