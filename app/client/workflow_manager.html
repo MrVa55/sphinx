@@ -309,7 +309,7 @@
                 progressText.textContent = '0%';
                 progressContainer.style.display = 'none';
                 
-                const response = await fetch(`${apiServerUrl}/execute_workflow`, {
+                const response = await fetch(`${apiServerUrl}/trigger_workflow`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -202,15 +202,15 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
                                 node["inputs"]["transformation_to"] = parameters["to"]
                                 execution_log.append(f"Updated transformation_to to: {parameters['to']} (from legacy 'to' parameter)")
                                 logger.info(f"Updated transformation_to to: {parameters['to']} (from legacy parameter)")
-                else:
-                    # Generic handling for other workflows
-                    for node_id, node in workflow_data.get("nodes", {}).items():
-                        if "inputs" in node:
-                            for param_name, param_value in parameters.items():
-                                if param_name in node["inputs"]:
-                                    node["inputs"][param_name] = param_value
-                                    execution_log.append(f"Updated parameter {param_name} in node {node_id}")
-                                    logger.info(f"Updated parameter {param_name} in node {node_id}")
+                    else:
+                        # Generic handling for other workflows
+                        for node_id, node in workflow_data.get("nodes", {}).items():
+                            if "inputs" in node:
+                                for param_name, param_value in parameters.items():
+                                    if param_name in node["inputs"]:
+                                        node["inputs"][param_name] = param_value
+                                        execution_log.append(f"Updated parameter {param_name} in node {node_id}")
+                                        logger.info(f"Updated parameter {param_name} in node {node_id}")
             except Exception as e:
                 execution_log.append(f"Warning: Error updating parameters: {e}")
                 logger.warning(f"Error updating parameters: {e}")
@@ -281,12 +281,8 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
                     if node_id is None:
                         execution_log.append("Workflow execution completed")
                         break
-                    else:
-                        execution_log.append(f"Executing node: {node_id}")
-                
                 elif msg_type == "executed":
                     execution_log.append("Node execution completed")
-                
                 elif msg_type == "progress":
                     # Extract progress value
                     try:
@@ -296,16 +292,15 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
                                 progress_value = int(data['value'])
                             elif 'data' in data and isinstance(data['data'], dict) and 'value' in data['data']:
                                 progress_value = int(data['data']['value'])
-                            else:
-                                # Default progress value if we can't extract it
-                                progress_value = 0
-                                
-                            if progress_value > current_progress:
-                                current_progress = progress_value
-                                execution_log.append(f"Progress: {current_progress}%")
+                        else:
+                            # Default progress value if we can't extract it
+                            progress_value = 0
+                            
+                        if progress_value > current_progress:
+                            current_progress = progress_value
+                            execution_log.append(f"Progress: {current_progress}%")
                     except Exception as e:
                         execution_log.append(f"Error processing progress message: {e}")
-                
                 elif msg_type == "status":
                     status = data.get("data", {}).get("status")
                     execution_log.append(f"Status: {status}")
@@ -381,12 +376,12 @@ def _execute_workflow_thread(workflow_filename, parameters, client_id):
                     execution_log.append(f"Error finding videos: {e}")
             except Exception as e:
                 execution_log.append(f"Error searching for videos: {e}")
-        
+                
         except Exception as e:
             execution_log.append(f"Error monitoring execution: {e}")
         
         execution_log.append("Workflow execution thread completed")
-    
+            
     except Exception as e:
         execution_log.append(f"Error in workflow execution thread: {e}")
     
@@ -458,6 +453,31 @@ def check_workflow_nodes(workflow_data):
     except Exception as e:
         logger.warning(f"Warning: Error in check_workflow_nodes: {e}")
         return True, []  # Assume workflow is valid if we can't check
+
+def test_comfyui_connection():
+    """
+    Test connection to ComfyUI and determine the best URL to use.
+    Returns the URL that works.
+    """
+    possible_urls = [
+        "http://127.0.0.1:3020",
+        "http://localhost:3020", 
+        "http://comfyui:3020"
+    ]
+    
+    for url in possible_urls:
+        try:
+            logger.info(f"Testing connection to ComfyUI at: {url}")
+            response = requests.get(f"{url}/system_stats", timeout=2)
+            if response.status_code == 200:
+                logger.info(f"✅ Successfully connected to ComfyUI API at {url}")
+                return url
+        except Exception as e:
+            logger.info(f"Could not connect to {url}: {e}")
+    
+    # If nothing else works, use the default URL
+    logger.warning("⚠️ No ComfyUI connection verified, using default URL")
+    return "http://127.0.0.1:3020"
 
 # Test if run directly
 if __name__ == "__main__":
